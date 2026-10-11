@@ -1,0 +1,155 @@
+# User guide
+
+## Setup
+
+Requirements: Python 3.12 (uv installs it), Node 24, no accounts, no ESPN credentials.
+
+```
+make install                 # backend: uv sync; frontend: npm ci
+make dev                     # backend http://127.0.0.1:8000, frontend http://127.0.0.1:5173
+make dev BACKEND_PORT=8020 FRONTEND_PORT=5180   # if those ports are taken
+```
+
+Open the frontend URL. The **Setup** screen lets you:
+
+- pick a **data snapshot**: the real `NBA 2026-27` snapshot (if `make refresh` + `make build-snapshot`
+  have been run) or the synthetic demo (always available, loudly labeled);
+- set the scoring format (H2H each category, H2H most categories, rotisserie), lineup mode
+  (weekly / daily), strict eligibility, managers and draft order (snake, linear, third-round
+  reversal), your team, starting slots, bench / IR counts, primary-position caps, keepers and
+  traded picks; or paste a full league JSON (advanced);
+- tick **Confirm your scoring format**. Until it is confirmed the draft screen shows a warning and
+  every recommendation carries a note, because the objective depends on it.
+
+Create the session; the URL now carries `?session=<id>` and the id is also kept in the browser, so
+reloading or reopening the tab restores it. The Setup screen lists existing sessions to resume.
+
+## Data refresh
+
+```
+make refresh          # ~12 requests: nba_api (3 seasons totals + game logs, active players), ESPN players + schedule
+make build-snapshot   # baseline projections + ESPN projections/eligibility/ADP -> data/nba/snapshots/<id>/
+make validate         # retrospective holdout check of the baseline model -> docs/VALIDATION.md
+make health           # data health JSON (sources, timestamps, coverage, unresolved identities)
+```
+
+Nothing is fetched while you draft. A failed refresh keeps the previous snapshot; the Data health
+screen shows per-source status, fetch timestamps, player coverage, missing eligibility and
+unresolved identities. The snapshot label and ADP date are shown in the draft top strip.
+
+## Draft day workflow
+
+1. Start `make dev`, open the session, confirm the format if you have not. When the draft order is
+   revealed, pick your slot in the **My team** selector in the top strip (it can be changed at any
+   time; the schedule and every recommendation recompute for that slot).
+2. The top strip shows round, overall pick, the manager on the clock, your next pick and the
+   number of picks until it, save status, snapshot date, scoring format and the model tier that
+   produced the current recommendations (A fast / B / C refined with elapsed time).
+3. When **another manager picks in ESPN**, record it: press `/`, type part of the name (accents and
+   suffixes are ignored, team codes work), move with `↑`/`↓`, press `Enter` to select, check the
+   team in the inline bar (it defaults to the team on the clock; the server rejects picks for
+   anyone else), press `Enter` again to record. Position chips and the availability filter narrow
+   the list. Availability, rosters, the scoreboard and the recommendations update immediately;
+   the save badge returns to "saved" when the backend has stored the event. The row buttons in
+   the Recommendations and All players tables record the pick for whoever is on the clock in one
+   click; when it is your turn they read "Draft".
+4. When **you are on the clock**, read the highlighted recommendation (score ± uncertainty, slot it
+   fills, survival hint, three to five computed reasons) and the shortlist. Columns: fast score and
+   tier, refined marginal utility, survival probability and draft-now-vs-wait advantage (filled in
+   when the refine job for the current state finishes), base value, the replacement it is measured
+   against, slot, main category gains and costs, projected GP / MIN, ADP, flags. Rows in the same
+   tier are effectively tied.
+5. Use **Preview** on any player (the "preview" button on picker rows, the shortlist, the card, or
+   the player drawer) to see your roster, open slots and category profile as if you drafted them
+   (before / after / delta columns, FG% and FT% with attempts). Expand a shortlist row (▸) for the
+   full nine-category breakdown: per-game stats, z-scores, strategy-weighted contributions, the
+   change to your totals, and the simulated win probability per category once refinement lands.
+   Use **Compare** on two or three players. Click a name for per-game details, projection source
+   and eligibility provenance. The **League category profiles** tab under the board shows every
+   manager's projected totals, rates with attempts, and per-category league rank after each pick.
+6. Click **Draft** on the card or a row (enabled only when you are on the clock), or use the picker.
+7. Change strategy at any time in the right panel: none / soft / fixed punt per category, category
+   weights, risk (conservative / neutral / aggressive), simulation budget and scenario count. Every
+   change is saved as an event and re-ranks immediately; punted categories stay visible.
+
+Keyboard shortcuts: `/` focus search · `↑` `↓` move · `Enter` select, `Enter` again records ·
+`Esc` back out, close dialogs and drawers. Shortcuts never fire while you type in another field.
+Layout: scoreboard on top (undo lives there), picker left, best pick + Recommendations / All
+players in the middle, My roster / Categories / Strategy / Teams tabs on the right, Draft history
+(recent picks with "fix", the board, league profiles) at the bottom. On a phone, use the Find
+player / Best picks / My team switch.
+
+## Punting (H2H each category)
+
+Punting a category means conceding it every week on purpose so every pick serves the other eight.
+It pays only when the players it frees up win more categories than the one you give away, which
+depends on your roster, so do not plan it before the draft. After three or four picks, open
+Strategy → **Punt advisor** → "Compare punt scenarios". For your current roster it completes the
+rest of your draft under balanced play and under each single punt (plus the best pair), then scores
+every finished roster against the league under the real rules, where the punted category still
+counts. Read it as:
+
+- **Cats won / wk**: expected categories won per weekly matchup; higher is better. Differences
+  inside about two standard errors are noise; keep balanced when it ties.
+- **Strong**: how many categories you'd win at least 55 % of the time. More strong categories with
+  fewer toss-ups is a sturdier build in each-category scoring.
+- Per-category columns: your win probability in each category under that plan; a starred column
+  is the one you concede.
+- **Likely next pick**: who the plan would take at your next turn, so you can see what it changes.
+
+Apply is always an explicit click; it sets a fixed punt (weight 0 in the ranking) and re-ranks.
+Re-run after each of your picks until you commit, usually by round 4 or 5; one punt is normal,
+two is the practical maximum.
+
+## Corrections and undo
+
+- **Undo last pick**: the "Undo #n" button in the scoreboard (only the most recent committed pick
+  can be undone; keepers are not picks).
+- **Correct an earlier pick**: "fix" next to the pick in Recent picks, or click the filled cell on
+  the draft board, and choose the right player.
+  Everything downstream is recomputed; the player you remove becomes available again.
+- **Order fixes** (traded picks, keepers, a wrong draft order): edit them in Setup; the schedule is
+  rebuilt and any already-recorded pick that no longer matches is kept and listed as a warning for
+  you to review, never deleted.
+- A rejected pick (duplicate player, wrong manager, not on the clock) is rolled back with the
+  server's message. A revision conflict (two tabs) refreshes the state and asks you to check it.
+
+## Imports
+
+Setup screen, "CSV imports" (a session must be selected). Download the template for the kind you
+need, fill it, paste or choose the file, **Preview** (every row shows the matched player, errors and
+warnings), then **Apply** (optionally skipping rows with errors):
+
+- **Projections**: per-game rates incl. FGM/FGA/FTM/FTA/3PM/3PA, games, minutes, optional cv and
+  source. Rows without attempts are rejected because FG%/FT% impact needs volume. Applied as a
+  derived snapshot the session switches to.
+- **Eligibility**: primary position and `PG;SG;…` eligible positions; a source starting with
+  `espn` is treated as verified, anything else is labeled unverified.
+- **ADP / ranks**: platform-labeled; non-ESPN platforms are flagged.
+- **Draft picks**: manager id or name plus player name; applied atomically in pick order.
+- **Session JSON**: export from the recap/health screens or `make export SESSION=<id>`; import with
+  the "Import session JSON" file input or `make import FILE=<file>`.
+
+Optional read-only ESPN import of a private league (settings and completed draft) is implemented in
+`backend/app/sources/espn_private.py` behind `COPILOT_ESPN_SWID` / `COPILOT_ESPN_S2` in
+`backend/.env`, but it has **not** been verified against a real league from this repository and
+there is no live draft feed. Treat manual entry as the supported path.
+
+## Troubleshooting
+
+- *Port already in use*: `make dev BACKEND_PORT=8020 FRONTEND_PORT=5180`.
+- *"updating…" never finishes*: the backend is down or on another port; the top strip shows
+  "offline". Picks you confirmed while offline are kept in the browser and retried with the same
+  idempotency key, so they are never saved twice.
+- *Refine shows "unavailable" or times out*: the fast tier A ranking is still valid; lower the
+  simulation depth in the Strategy tab.
+- *Simulation depth*: Strategy tab → "Simulation depth" (Quick 1.5 s, Standard 4 s default, Deep 8 s,
+  Max 15 s). It is the wall-clock budget spent on the refined columns after every pick; a deeper
+  setting runs more draft rollouts and fills draft-now-vs-wait for more rows. Keep it below the
+  time between picks; a new pick discards an unfinished run anyway.
+- *A player is missing*: search includes drafted players (greyed, with who took them). If a real
+  player is absent from the snapshot, import a projection row for them or rebuild after a refresh.
+- *Eligibility marked unverified*: the player had no ESPN match; import eligibility or enable
+  strict mode to exclude such players.
+- *Reset*: delete the session on the Setup screen (irreversible) or delete
+  `data/sessions/sessions.sqlite` to remove all sessions.

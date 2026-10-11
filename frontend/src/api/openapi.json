@@ -1,0 +1,3774 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "ESPN 9-cat Draft Copilot",
+  "version": "0.1.0"
+ },
+ "paths": {
+  "/api/health": {
+   "get": {
+    "summary": "Health",
+    "operationId": "health_api_health_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HealthView"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/snapshots": {
+   "get": {
+    "summary": "List Snapshots",
+    "operationId": "list_snapshots_api_snapshots_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/SnapshotMeta"
+         },
+         "type": "array",
+         "title": "Response List Snapshots Api Snapshots Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/snapshots/{snapshot_id}/players": {
+   "get": {
+    "summary": "Snapshot Players",
+    "operationId": "snapshot_players_api_snapshots__snapshot_id__players_get",
+    "parameters": [
+     {
+      "name": "snapshot_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Snapshot Id"
+      }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Q"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 2000,
+       "minimum": 1,
+       "default": 50,
+       "title": "Limit"
+      }
+     },
+     {
+      "name": "session_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Session Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/PlayerView"
+         },
+         "title": "Response Snapshot Players Api Snapshots  Snapshot Id  Players Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sessions": {
+   "get": {
+    "summary": "List Sessions",
+    "operationId": "list_sessions_api_sessions_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/SessionSummary"
+         },
+         "type": "array",
+         "title": "Response List Sessions Api Sessions Get"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "summary": "Create Session",
+    "operationId": "create_session_api_sessions_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SessionCreate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SessionSummary"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sessions/{session_id}": {
+   "get": {
+    "summary": "Get Session",
+    "operationId": "get_session_api_sessions__session_id__get",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SessionDetail"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "summary": "Delete Session",
+    "operationId": "delete_session_api_sessions__session_id__delete",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sessions/{session_id}/state": {
+   "get": {
+    "summary": "Get State",
+    "operationId": "get_state_api_sessions__session_id__state_get",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DraftStateView"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sessions/{session_id}/export": {
+   "get": {
+    "summary": "Export Session",
+    "operationId": "export_session_api_sessions__session_id__export_get",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Export Session Api Sessions  Session Id  Export Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sessions/import": {
+   "post": {
+    "summary": "Import Session",
+    "operationId": "import_session_api_sessions_import_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "additionalProperties": true,
+        "type": "object",
+        "title": "Body"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SessionSummary"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sessions/{session_id}/events": {
+   "get": {
+    "summary": "List Events",
+    "operationId": "list_events_api_sessions__session_id__events_get",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/EventView"
+         },
+         "title": "Response List Events Api Sessions  Session Id  Events Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "summary": "Append Event",
+    "operationId": "append_event_api_sessions__session_id__events_post",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EventRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EventResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sessions/{session_id}/events/batch": {
+   "post": {
+    "summary": "Append Batch",
+    "operationId": "append_batch_api_sessions__session_id__events_batch_post",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/BatchRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DraftStateView"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/templates/{kind}": {
+   "get": {
+    "summary": "Template",
+    "operationId": "template_api_templates__kind__get",
+    "parameters": [
+     {
+      "name": "kind",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Kind"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sessions/{session_id}/import/preview": {
+   "post": {
+    "summary": "Import Preview",
+    "operationId": "import_preview_api_sessions__session_id__import_preview_post",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ImportPreviewRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ImportPreviewView"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sessions/{session_id}/import/apply": {
+   "post": {
+    "summary": "Import Apply",
+    "operationId": "import_apply_api_sessions__session_id__import_apply_post",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ImportApplyRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ImportApplyResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sessions/{session_id}/recommend/fast": {
+   "post": {
+    "summary": "Recommend Fast",
+    "operationId": "recommend_fast_api_sessions__session_id__recommend_fast_post",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/FastRecommendRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RecommendationResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sessions/{session_id}/profiles": {
+   "get": {
+    "summary": "League Profiles",
+    "operationId": "league_profiles_api_sessions__session_id__profiles_get",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LeagueProfilesResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sessions/{session_id}/compare": {
+   "post": {
+    "summary": "Compare",
+    "operationId": "compare_api_sessions__session_id__compare_post",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CompareRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CompareResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sessions/{session_id}/recommend/refine": {
+   "post": {
+    "summary": "Recommend Refine",
+    "operationId": "recommend_refine_api_sessions__session_id__recommend_refine_post",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RefineRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/JobAccepted"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sessions/{session_id}/punt-advisor": {
+   "post": {
+    "summary": "Punt Advisor",
+    "description": "Compares strategy scenarios for the current roster. Synchronous, bounded by budget_ms; never applies anything.",
+    "operationId": "punt_advisor_api_sessions__session_id__punt_advisor_post",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PuntAdvisorRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PuntAdvisorResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/jobs/{job_id}": {
+   "get": {
+    "summary": "Get Job",
+    "operationId": "get_job_api_jobs__job_id__get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     },
+     {
+      "name": "session_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Session Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/JobView"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "BatchItem": {
+    "properties": {
+     "type": {
+      "$ref": "#/components/schemas/EventType"
+     },
+     "payload": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Payload"
+     },
+     "idempotency_key": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Idempotency Key"
+     }
+    },
+    "type": "object",
+    "required": [
+     "type",
+     "payload"
+    ],
+    "title": "BatchItem"
+   },
+   "BatchRequest": {
+    "properties": {
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/BatchItem"
+      },
+      "type": "array",
+      "title": "Items"
+     },
+     "expected_revision": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expected Revision"
+     },
+     "source": {
+      "type": "string",
+      "title": "Source",
+      "default": "import"
+     }
+    },
+    "type": "object",
+    "required": [
+     "items"
+    ],
+    "title": "BatchRequest"
+   },
+   "CandidateView": {
+    "properties": {
+     "player_id": {
+      "type": "string",
+      "title": "Player Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "team": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team"
+     },
+     "primary_position": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Primary Position"
+     },
+     "eligible_positions": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Eligible Positions"
+     },
+     "eligibility_verified": {
+      "type": "boolean",
+      "title": "Eligibility Verified"
+     },
+     "injury_status": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Injury Status"
+     },
+     "score": {
+      "type": "number",
+      "title": "Score"
+     },
+     "tier": {
+      "type": "integer",
+      "title": "Tier"
+     },
+     "base_value": {
+      "type": "number",
+      "title": "Base Value"
+     },
+     "replacement_value": {
+      "type": "number",
+      "title": "Replacement Value"
+     },
+     "replacement_player_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Replacement Player Id"
+     },
+     "replacement_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Replacement Name"
+     },
+     "slot": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Slot"
+     },
+     "fills_open_starting_slot": {
+      "type": "boolean",
+      "title": "Fills Open Starting Slot"
+     },
+     "completion_ok": {
+      "type": "boolean",
+      "title": "Completion Ok"
+     },
+     "risk_adjustment": {
+      "type": "number",
+      "title": "Risk Adjustment"
+     },
+     "value_sd": {
+      "type": "number",
+      "title": "Value Sd"
+     },
+     "survival_hint": {
+      "type": "string",
+      "title": "Survival Hint"
+     },
+     "adp": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Adp"
+     },
+     "rank": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Rank"
+     },
+     "flags": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Flags"
+     },
+     "z": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Z"
+     },
+     "contributions": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Contributions"
+     },
+     "reasons": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Reasons"
+     },
+     "per_game": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Per Game"
+     },
+     "games": {
+      "type": "number",
+      "title": "Games"
+     },
+     "minutes": {
+      "type": "number",
+      "title": "Minutes"
+     },
+     "projection_source": {
+      "type": "string",
+      "title": "Projection Source"
+     },
+     "category_deltas": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "$ref": "#/components/schemas/CategoryDelta"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Category Deltas"
+     },
+     "refined_score": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Refined Score"
+     },
+     "refined_detail": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Refined Detail"
+     }
+    },
+    "type": "object",
+    "required": [
+     "player_id",
+     "name",
+     "team",
+     "primary_position",
+     "eligible_positions",
+     "eligibility_verified",
+     "injury_status",
+     "score",
+     "tier",
+     "base_value",
+     "replacement_value",
+     "replacement_player_id",
+     "replacement_name",
+     "slot",
+     "fills_open_starting_slot",
+     "completion_ok",
+     "risk_adjustment",
+     "value_sd",
+     "survival_hint",
+     "adp",
+     "rank",
+     "flags",
+     "z",
+     "contributions",
+     "reasons",
+     "per_game",
+     "games",
+     "minutes",
+     "projection_source"
+    ],
+    "title": "CandidateView"
+   },
+   "CategoryDef": {
+    "properties": {
+     "key": {
+      "type": "string",
+      "title": "Key"
+     },
+     "label": {
+      "type": "string",
+      "title": "Label"
+     },
+     "higher_is_better": {
+      "type": "boolean",
+      "title": "Higher Is Better",
+      "default": true
+     },
+     "kind": {
+      "$ref": "#/components/schemas/CategoryKind",
+      "default": "counting"
+     },
+     "numerator": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Numerator"
+     },
+     "denominator": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Denominator"
+     }
+    },
+    "type": "object",
+    "required": [
+     "key",
+     "label"
+    ],
+    "title": "CategoryDef"
+   },
+   "CategoryDelta": {
+    "properties": {
+     "before": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Before"
+     },
+     "after": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "After"
+     },
+     "delta": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Delta"
+     },
+     "unit": {
+      "type": "string",
+      "title": "Unit"
+     }
+    },
+    "type": "object",
+    "required": [
+     "before",
+     "after",
+     "delta",
+     "unit"
+    ],
+    "title": "CategoryDelta"
+   },
+   "CategoryKind": {
+    "type": "string",
+    "enum": [
+     "counting",
+     "ratio"
+    ],
+    "title": "CategoryKind"
+   },
+   "CategoryProfile": {
+    "properties": {
+     "totals": {
+      "additionalProperties": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "type": "object",
+      "title": "Totals"
+     },
+     "attempts": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Attempts"
+     },
+     "z": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Z"
+     },
+     "punt_labels": {
+      "additionalProperties": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "type": "object",
+      "title": "Punt Labels"
+     },
+     "weights": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Weights"
+     },
+     "marginal_value": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "type": "number"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Marginal Value"
+     },
+     "unit": {
+      "type": "string",
+      "title": "Unit",
+      "default": "projected season totals (per-game \u00d7 projected games)"
+     },
+     "standardization": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Standardization"
+     }
+    },
+    "type": "object",
+    "required": [
+     "totals",
+     "attempts",
+     "z",
+     "punt_labels",
+     "weights",
+     "standardization"
+    ],
+    "title": "CategoryProfile"
+   },
+   "CompareRequest": {
+    "properties": {
+     "player_ids": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 3,
+      "minItems": 2,
+      "title": "Player Ids"
+     }
+    },
+    "type": "object",
+    "required": [
+     "player_ids"
+    ],
+    "title": "CompareRequest"
+   },
+   "CompareResponse": {
+    "properties": {
+     "ids": {
+      "$ref": "#/components/schemas/ResponseIds"
+     },
+     "players": {
+      "items": {
+       "$ref": "#/components/schemas/CandidateView"
+      },
+      "type": "array",
+      "title": "Players"
+     },
+     "keys": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Keys"
+     }
+    },
+    "type": "object",
+    "required": [
+     "ids",
+     "players",
+     "keys"
+    ],
+    "title": "CompareResponse"
+   },
+   "DraftStateView": {
+    "properties": {
+     "draft_revision": {
+      "type": "integer",
+      "title": "Draft Revision"
+     },
+     "strategy_revision": {
+      "type": "integer",
+      "title": "Strategy Revision"
+     },
+     "league_revision": {
+      "type": "integer",
+      "title": "League Revision"
+     },
+     "last_seq": {
+      "type": "integer",
+      "title": "Last Seq"
+     },
+     "is_complete": {
+      "type": "boolean",
+      "title": "Is Complete"
+     },
+     "format_confirmed": {
+      "type": "boolean",
+      "title": "Format Confirmed"
+     },
+     "current_pick": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/PickView"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "on_clock_manager_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "On Clock Manager Id"
+     },
+     "user_next_pick": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/PickView"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "user_following_pick": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/PickView"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "picks_until_user_turn": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Picks Until User Turn"
+     },
+     "picks": {
+      "items": {
+       "$ref": "#/components/schemas/PickRecordView"
+      },
+      "type": "array",
+      "title": "Picks"
+     },
+     "schedule": {
+      "items": {
+       "$ref": "#/components/schemas/PickView"
+      },
+      "type": "array",
+      "title": "Schedule"
+     },
+     "rosters": {
+      "additionalProperties": {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "type": "object",
+      "title": "Rosters"
+     },
+     "drafted_player_ids": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Drafted Player Ids"
+     },
+     "remaining_user_picks": {
+      "type": "integer",
+      "title": "Remaining User Picks"
+     },
+     "warnings": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Warnings"
+     },
+     "strategy": {
+      "$ref": "#/components/schemas/Strategy"
+     },
+     "league": {
+      "$ref": "#/components/schemas/LeagueConfig"
+     }
+    },
+    "type": "object",
+    "required": [
+     "draft_revision",
+     "strategy_revision",
+     "league_revision",
+     "last_seq",
+     "is_complete",
+     "format_confirmed",
+     "current_pick",
+     "on_clock_manager_id",
+     "user_next_pick",
+     "user_following_pick",
+     "picks_until_user_turn",
+     "picks",
+     "schedule",
+     "rosters",
+     "drafted_player_ids",
+     "remaining_user_picks",
+     "warnings",
+     "strategy",
+     "league"
+    ],
+    "title": "DraftStateView"
+   },
+   "EventRequest": {
+    "properties": {
+     "type": {
+      "$ref": "#/components/schemas/EventType"
+     },
+     "payload": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Payload"
+     },
+     "idempotency_key": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Idempotency Key"
+     },
+     "expected_revision": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expected Revision"
+     },
+     "source": {
+      "type": "string",
+      "title": "Source",
+      "default": "manual"
+     }
+    },
+    "type": "object",
+    "required": [
+     "type"
+    ],
+    "title": "EventRequest"
+   },
+   "EventResponse": {
+    "properties": {
+     "event": {
+      "$ref": "#/components/schemas/EventView"
+     },
+     "state": {
+      "$ref": "#/components/schemas/DraftStateView"
+     },
+     "deduplicated": {
+      "type": "boolean",
+      "title": "Deduplicated"
+     }
+    },
+    "type": "object",
+    "required": [
+     "event",
+     "state",
+     "deduplicated"
+    ],
+    "title": "EventResponse"
+   },
+   "EventType": {
+    "type": "string",
+    "enum": [
+     "session_created",
+     "pick_committed",
+     "pick_undone",
+     "pick_corrected",
+     "keeper_assigned",
+     "order_changed",
+     "strategy_changed",
+     "league_updated",
+     "format_confirmed",
+     "note"
+    ],
+    "title": "EventType"
+   },
+   "EventView": {
+    "properties": {
+     "seq": {
+      "type": "integer",
+      "title": "Seq"
+     },
+     "type": {
+      "$ref": "#/components/schemas/EventType"
+     },
+     "payload": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Payload"
+     },
+     "idempotency_key": {
+      "type": "string",
+      "title": "Idempotency Key"
+     },
+     "created_at": {
+      "type": "string",
+      "title": "Created At"
+     },
+     "source": {
+      "type": "string",
+      "title": "Source"
+     }
+    },
+    "type": "object",
+    "required": [
+     "seq",
+     "type",
+     "payload",
+     "idempotency_key",
+     "created_at",
+     "source"
+    ],
+    "title": "EventView"
+   },
+   "FastRecommendRequest": {
+    "properties": {
+     "limit": {
+      "type": "integer",
+      "maximum": 200.0,
+      "minimum": 1.0,
+      "title": "Limit",
+      "default": 25
+     },
+     "preview_player_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Preview Player Id"
+     },
+     "include_deltas": {
+      "type": "integer",
+      "maximum": 50.0,
+      "minimum": 0.0,
+      "title": "Include Deltas",
+      "default": 8
+     }
+    },
+    "type": "object",
+    "title": "FastRecommendRequest"
+   },
+   "HTTPValidationError": {
+    "properties": {
+     "detail": {
+      "items": {
+       "$ref": "#/components/schemas/ValidationError"
+      },
+      "type": "array",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "title": "HTTPValidationError"
+   },
+   "HealthView": {
+    "properties": {
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "data_dir": {
+      "type": "string",
+      "title": "Data Dir"
+     },
+     "snapshots": {
+      "items": {
+       "$ref": "#/components/schemas/SnapshotMeta"
+      },
+      "type": "array",
+      "title": "Snapshots"
+     },
+     "default_snapshot_id": {
+      "type": "string",
+      "title": "Default Snapshot Id"
+     },
+     "snapshot_errors": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "type": "object",
+      "title": "Snapshot Errors"
+     },
+     "sessions": {
+      "type": "integer",
+      "title": "Sessions"
+     },
+     "data_health": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Data Health"
+     }
+    },
+    "type": "object",
+    "required": [
+     "status",
+     "data_dir",
+     "snapshots",
+     "default_snapshot_id",
+     "snapshot_errors",
+     "sessions",
+     "data_health"
+    ],
+    "title": "HealthView"
+   },
+   "ImportApplyRequest": {
+    "properties": {
+     "kind": {
+      "type": "string",
+      "enum": [
+       "projections",
+       "eligibility",
+       "adp",
+       "picks"
+      ],
+      "title": "Kind"
+     },
+     "text": {
+      "type": "string",
+      "maxLength": 5000000,
+      "minLength": 1,
+      "title": "Text"
+     },
+     "skip_error_rows": {
+      "type": "boolean",
+      "title": "Skip Error Rows",
+      "default": false
+     },
+     "expected_revision": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expected Revision"
+     }
+    },
+    "type": "object",
+    "required": [
+     "kind",
+     "text"
+    ],
+    "title": "ImportApplyRequest"
+   },
+   "ImportApplyResponse": {
+    "properties": {
+     "kind": {
+      "type": "string",
+      "title": "Kind"
+     },
+     "applied_rows": {
+      "type": "integer",
+      "title": "Applied Rows"
+     },
+     "skipped_rows": {
+      "type": "integer",
+      "title": "Skipped Rows"
+     },
+     "snapshot_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Snapshot Id"
+     },
+     "state": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/DraftStateView"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "type": "object",
+    "required": [
+     "kind",
+     "applied_rows",
+     "skipped_rows"
+    ],
+    "title": "ImportApplyResponse"
+   },
+   "ImportPreviewRequest": {
+    "properties": {
+     "kind": {
+      "type": "string",
+      "enum": [
+       "projections",
+       "eligibility",
+       "adp",
+       "picks"
+      ],
+      "title": "Kind"
+     },
+     "text": {
+      "type": "string",
+      "maxLength": 5000000,
+      "minLength": 1,
+      "title": "Text"
+     }
+    },
+    "type": "object",
+    "required": [
+     "kind",
+     "text"
+    ],
+    "title": "ImportPreviewRequest"
+   },
+   "ImportPreviewView": {
+    "properties": {
+     "kind": {
+      "type": "string",
+      "title": "Kind"
+     },
+     "columns": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Columns"
+     },
+     "missing_columns": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Missing Columns"
+     },
+     "n_rows": {
+      "type": "integer",
+      "title": "N Rows"
+     },
+     "n_ok": {
+      "type": "integer",
+      "title": "N Ok"
+     },
+     "n_error": {
+      "type": "integer",
+      "title": "N Error"
+     },
+     "notes": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Notes"
+     },
+     "rows": {
+      "items": {
+       "$ref": "#/components/schemas/ImportRowView"
+      },
+      "type": "array",
+      "title": "Rows"
+     }
+    },
+    "type": "object",
+    "required": [
+     "kind",
+     "columns",
+     "missing_columns",
+     "n_rows",
+     "n_ok",
+     "n_error",
+     "notes",
+     "rows"
+    ],
+    "title": "ImportPreviewView"
+   },
+   "ImportRowView": {
+    "properties": {
+     "row": {
+      "type": "integer",
+      "title": "Row"
+     },
+     "player_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Player Id"
+     },
+     "matched_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Matched Name"
+     },
+     "errors": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Errors"
+     },
+     "warnings": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Warnings"
+     },
+     "data": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Data"
+     }
+    },
+    "type": "object",
+    "required": [
+     "row",
+     "player_id",
+     "matched_name",
+     "errors",
+     "warnings",
+     "data"
+    ],
+    "title": "ImportRowView"
+   },
+   "JobAccepted": {
+    "properties": {
+     "job_id": {
+      "type": "string",
+      "title": "Job Id"
+     },
+     "ids": {
+      "$ref": "#/components/schemas/ResponseIds"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     }
+    },
+    "type": "object",
+    "required": [
+     "job_id",
+     "ids",
+     "status"
+    ],
+    "title": "JobAccepted"
+   },
+   "JobView": {
+    "properties": {
+     "job_id": {
+      "type": "string",
+      "title": "Job Id"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "ids": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Ids"
+     },
+     "stale": {
+      "type": "boolean",
+      "title": "Stale"
+     },
+     "result": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/RefinementResponse"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "error": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Error"
+     },
+     "elapsed_ms": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Elapsed Ms"
+     }
+    },
+    "type": "object",
+    "required": [
+     "job_id",
+     "status",
+     "ids",
+     "stale"
+    ],
+    "title": "JobView"
+   },
+   "Keeper": {
+    "properties": {
+     "manager_id": {
+      "type": "string",
+      "title": "Manager Id"
+     },
+     "player_id": {
+      "type": "string",
+      "title": "Player Id"
+     },
+     "round": {
+      "type": "integer",
+      "minimum": 1.0,
+      "title": "Round"
+     }
+    },
+    "type": "object",
+    "required": [
+     "manager_id",
+     "player_id",
+     "round"
+    ],
+    "title": "Keeper"
+   },
+   "LeagueConfig": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "title": "Name",
+      "default": "My ESPN 9-cat league"
+     },
+     "platform": {
+      "type": "string",
+      "enum": [
+       "espn",
+       "custom"
+      ],
+      "title": "Platform",
+      "default": "espn"
+     },
+     "season": {
+      "type": "string",
+      "title": "Season",
+      "default": "2026-27"
+     },
+     "scoring_format": {
+      "$ref": "#/components/schemas/ScoringFormat",
+      "default": "h2h_each_category"
+     },
+     "format_confirmed": {
+      "type": "boolean",
+      "title": "Format Confirmed",
+      "default": false
+     },
+     "categories": {
+      "items": {
+       "$ref": "#/components/schemas/CategoryDef"
+      },
+      "type": "array",
+      "title": "Categories"
+     },
+     "tie_rule": {
+      "$ref": "#/components/schemas/TieRule"
+     },
+     "managers": {
+      "items": {
+       "$ref": "#/components/schemas/Manager"
+      },
+      "type": "array",
+      "title": "Managers"
+     },
+     "user_manager_id": {
+      "type": "string",
+      "title": "User Manager Id"
+     },
+     "starting_slots": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Starting Slots"
+     },
+     "bench_slots": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Bench Slots",
+      "default": 3
+     },
+     "ir_slots": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Ir Slots",
+      "default": 1
+     },
+     "draft_type": {
+      "type": "string",
+      "enum": [
+       "snake",
+       "linear",
+       "custom"
+      ],
+      "title": "Draft Type",
+      "default": "snake"
+     },
+     "draft_order": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Draft Order",
+      "description": "manager ids in round-1 order"
+     },
+     "third_round_reversal": {
+      "type": "boolean",
+      "title": "Third Round Reversal",
+      "default": false
+     },
+     "keepers": {
+      "items": {
+       "$ref": "#/components/schemas/Keeper"
+      },
+      "type": "array",
+      "title": "Keepers"
+     },
+     "traded_picks": {
+      "items": {
+       "$ref": "#/components/schemas/TradedPick"
+      },
+      "type": "array",
+      "title": "Traded Picks"
+     },
+     "position_caps": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Position Caps",
+      "description": "primary position -> max"
+     },
+     "position_minimums": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Position Minimums"
+     },
+     "lineup_mode": {
+      "$ref": "#/components/schemas/LineupMode",
+      "default": "weekly"
+     },
+     "max_games_per_week": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Max Games Per Week"
+     },
+     "regular_season_weeks": {
+      "type": "integer",
+      "title": "Regular Season Weeks",
+      "default": 19
+     },
+     "playoff_weeks": {
+      "type": "integer",
+      "title": "Playoff Weeks",
+      "default": 3
+     },
+     "strict_eligibility": {
+      "type": "boolean",
+      "title": "Strict Eligibility",
+      "default": false
+     }
+    },
+    "type": "object",
+    "required": [
+     "managers",
+     "user_manager_id"
+    ],
+    "title": "LeagueConfig"
+   },
+   "LeagueProfilesResponse": {
+    "properties": {
+     "ids": {
+      "$ref": "#/components/schemas/ResponseIds"
+     },
+     "keys": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Keys"
+     },
+     "managers": {
+      "items": {
+       "$ref": "#/components/schemas/ManagerProfile"
+      },
+      "type": "array",
+      "title": "Managers"
+     },
+     "unit": {
+      "type": "string",
+      "title": "Unit",
+      "default": "projected season totals (per-game \u00d7 projected games); rates are makes \u00f7 attempts"
+     }
+    },
+    "type": "object",
+    "required": [
+     "ids",
+     "keys",
+     "managers"
+    ],
+    "title": "LeagueProfilesResponse"
+   },
+   "LineupMode": {
+    "type": "string",
+    "enum": [
+     "weekly",
+     "daily"
+    ],
+    "title": "LineupMode"
+   },
+   "Manager": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "is_user": {
+      "type": "boolean",
+      "title": "Is User",
+      "default": false
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "name"
+    ],
+    "title": "Manager"
+   },
+   "ManagerProfile": {
+    "properties": {
+     "manager_id": {
+      "type": "string",
+      "title": "Manager Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "is_user": {
+      "type": "boolean",
+      "title": "Is User"
+     },
+     "n_players": {
+      "type": "integer",
+      "title": "N Players"
+     },
+     "totals": {
+      "additionalProperties": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "type": "object",
+      "title": "Totals"
+     },
+     "attempts": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Attempts"
+     },
+     "z": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Z"
+     },
+     "rank": {
+      "additionalProperties": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "type": "object",
+      "title": "Rank"
+     },
+     "categories_top3": {
+      "type": "integer",
+      "title": "Categories Top3"
+     }
+    },
+    "type": "object",
+    "required": [
+     "manager_id",
+     "name",
+     "is_user",
+     "n_players",
+     "totals",
+     "attempts",
+     "z",
+     "rank",
+     "categories_top3"
+    ],
+    "title": "ManagerProfile"
+   },
+   "PickRecordView": {
+    "properties": {
+     "overall": {
+      "type": "integer",
+      "title": "Overall"
+     },
+     "manager_id": {
+      "type": "string",
+      "title": "Manager Id"
+     },
+     "player_id": {
+      "type": "string",
+      "title": "Player Id"
+     },
+     "is_keeper": {
+      "type": "boolean",
+      "title": "Is Keeper"
+     },
+     "source": {
+      "type": "string",
+      "title": "Source"
+     },
+     "seq": {
+      "type": "integer",
+      "title": "Seq"
+     }
+    },
+    "type": "object",
+    "required": [
+     "overall",
+     "manager_id",
+     "player_id",
+     "is_keeper",
+     "source",
+     "seq"
+    ],
+    "title": "PickRecordView"
+   },
+   "PickView": {
+    "properties": {
+     "overall": {
+      "type": "integer",
+      "title": "Overall"
+     },
+     "round": {
+      "type": "integer",
+      "title": "Round"
+     },
+     "pick_in_round": {
+      "type": "integer",
+      "title": "Pick In Round"
+     },
+     "manager_id": {
+      "type": "string",
+      "title": "Manager Id"
+     },
+     "original_manager_id": {
+      "type": "string",
+      "title": "Original Manager Id"
+     },
+     "keeper_player_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Keeper Player Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "overall",
+     "round",
+     "pick_in_round",
+     "manager_id",
+     "original_manager_id"
+    ],
+    "title": "PickView"
+   },
+   "PlayerView": {
+    "properties": {
+     "player_id": {
+      "type": "string",
+      "title": "Player Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "team": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team"
+     },
+     "primary_position": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Primary Position"
+     },
+     "eligible_positions": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Eligible Positions"
+     },
+     "eligibility_source": {
+      "type": "string",
+      "title": "Eligibility Source"
+     },
+     "eligibility_verified": {
+      "type": "boolean",
+      "title": "Eligibility Verified"
+     },
+     "injury_status": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Injury Status"
+     },
+     "age": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Age"
+     },
+     "is_rookie": {
+      "type": "boolean",
+      "title": "Is Rookie"
+     },
+     "adp": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Adp"
+     },
+     "rank": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Rank"
+     },
+     "projection_source": {
+      "type": "string",
+      "title": "Projection Source"
+     },
+     "per_game": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Per Game"
+     },
+     "per_game_sd": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Per Game Sd"
+     },
+     "drafted_by": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Drafted By"
+     },
+     "drafted_overall": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Drafted Overall"
+     }
+    },
+    "type": "object",
+    "required": [
+     "player_id",
+     "name",
+     "team",
+     "primary_position",
+     "eligible_positions",
+     "eligibility_source",
+     "eligibility_verified",
+     "injury_status",
+     "age",
+     "is_rookie",
+     "adp",
+     "rank",
+     "projection_source",
+     "per_game",
+     "per_game_sd"
+    ],
+    "title": "PlayerView"
+   },
+   "PuntAdvisorRequest": {
+    "properties": {
+     "budget_ms": {
+      "type": "integer",
+      "maximum": 60000.0,
+      "minimum": 500.0,
+      "title": "Budget Ms",
+      "default": 6000
+     },
+     "seed": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Seed"
+     }
+    },
+    "type": "object",
+    "title": "PuntAdvisorRequest"
+   },
+   "PuntAdvisorResponse": {
+    "properties": {
+     "ids": {
+      "$ref": "#/components/schemas/ResponseIds"
+     },
+     "objective_label": {
+      "type": "string",
+      "title": "Objective Label"
+     },
+     "computed_ms": {
+      "type": "number",
+      "title": "Computed Ms"
+     },
+     "rollouts": {
+      "type": "integer",
+      "title": "Rollouts"
+     },
+     "scenarios": {
+      "items": {
+       "$ref": "#/components/schemas/PuntScenario"
+      },
+      "type": "array",
+      "title": "Scenarios"
+     },
+     "notes": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Notes"
+     }
+    },
+    "type": "object",
+    "required": [
+     "ids",
+     "objective_label",
+     "computed_ms",
+     "rollouts",
+     "scenarios",
+     "notes"
+    ],
+    "title": "PuntAdvisorResponse"
+   },
+   "PuntKind": {
+    "type": "string",
+    "enum": [
+     "fixed",
+     "soft"
+    ],
+    "title": "PuntKind"
+   },
+   "PuntScenario": {
+    "properties": {
+     "key": {
+      "type": "string",
+      "title": "Key"
+     },
+     "label": {
+      "type": "string",
+      "title": "Label"
+     },
+     "punts": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "type": "object",
+      "title": "Punts"
+     },
+     "objective": {
+      "type": "number",
+      "title": "Objective"
+     },
+     "se": {
+      "type": "number",
+      "title": "Se"
+     },
+     "delta_vs_balanced": {
+      "type": "number",
+      "title": "Delta Vs Balanced"
+     },
+     "category_win_probs": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Category Win Probs"
+     },
+     "strong_categories": {
+      "type": "integer",
+      "title": "Strong Categories"
+     },
+     "tossup_categories": {
+      "type": "integer",
+      "title": "Tossup Categories"
+     },
+     "likely_targets": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Likely Targets"
+     },
+     "is_current": {
+      "type": "boolean",
+      "title": "Is Current"
+     }
+    },
+    "type": "object",
+    "required": [
+     "key",
+     "label",
+     "punts",
+     "objective",
+     "se",
+     "delta_vs_balanced",
+     "category_win_probs",
+     "strong_categories",
+     "tossup_categories",
+     "likely_targets",
+     "is_current"
+    ],
+    "title": "PuntScenario"
+   },
+   "RecommendationResponse": {
+    "properties": {
+     "ids": {
+      "$ref": "#/components/schemas/ResponseIds"
+     },
+     "tier": {
+      "type": "string",
+      "title": "Tier"
+     },
+     "computed_ms": {
+      "type": "number",
+      "title": "Computed Ms"
+     },
+     "highlighted": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/CandidateView"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "shortlist": {
+      "items": {
+       "$ref": "#/components/schemas/CandidateView"
+      },
+      "type": "array",
+      "title": "Shortlist"
+     },
+     "user_roster": {
+      "$ref": "#/components/schemas/RosterView"
+     },
+     "category_profile": {
+      "$ref": "#/components/schemas/CategoryProfile"
+     },
+     "notes": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Notes"
+     },
+     "preview_player_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Preview Player Id"
+     },
+     "preview_candidate": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/CandidateView"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "type": "object",
+    "required": [
+     "ids",
+     "tier",
+     "computed_ms",
+     "highlighted",
+     "shortlist",
+     "user_roster",
+     "category_profile",
+     "notes"
+    ],
+    "title": "RecommendationResponse"
+   },
+   "RefineRequest": {
+    "properties": {
+     "limit": {
+      "type": "integer",
+      "maximum": 20.0,
+      "minimum": 2.0,
+      "title": "Limit",
+      "default": 8
+     },
+     "budget_ms": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Budget Ms"
+     },
+     "scenarios": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Scenarios"
+     },
+     "seed": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Seed"
+     }
+    },
+    "type": "object",
+    "title": "RefineRequest"
+   },
+   "RefinedCandidate": {
+    "properties": {
+     "player_id": {
+      "type": "string",
+      "title": "Player Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "layer_a_score": {
+      "type": "number",
+      "title": "Layer A Score"
+     },
+     "utility_now": {
+      "type": "number",
+      "title": "Utility Now"
+     },
+     "utility_alternative": {
+      "type": "number",
+      "title": "Utility Alternative"
+     },
+     "marginal_utility": {
+      "type": "number",
+      "title": "Marginal Utility"
+     },
+     "survival_probability": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Survival Probability"
+     },
+     "survival_label": {
+      "type": "string",
+      "title": "Survival Label"
+     },
+     "wait_value": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Wait Value"
+     },
+     "draft_now_advantage": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Draft Now Advantage"
+     },
+     "objective_estimate": {
+      "type": "number",
+      "title": "Objective Estimate"
+     },
+     "objective_label": {
+      "type": "string",
+      "title": "Objective Label"
+     },
+     "category_win_probs": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Category Win Probs"
+     },
+     "uncertainty": {
+      "type": "number",
+      "title": "Uncertainty"
+     },
+     "tier": {
+      "type": "integer",
+      "title": "Tier"
+     },
+     "explanation": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Explanation"
+     }
+    },
+    "type": "object",
+    "required": [
+     "player_id",
+     "name",
+     "layer_a_score",
+     "utility_now",
+     "utility_alternative",
+     "marginal_utility",
+     "survival_probability",
+     "survival_label",
+     "wait_value",
+     "draft_now_advantage",
+     "objective_estimate",
+     "objective_label",
+     "category_win_probs",
+     "uncertainty",
+     "tier",
+     "explanation"
+    ],
+    "title": "RefinedCandidate"
+   },
+   "RefinementResponse": {
+    "properties": {
+     "ids": {
+      "$ref": "#/components/schemas/ResponseIds"
+     },
+     "tier": {
+      "type": "string",
+      "title": "Tier"
+     },
+     "computed_ms": {
+      "type": "number",
+      "title": "Computed Ms"
+     },
+     "budget_ms": {
+      "type": "integer",
+      "title": "Budget Ms"
+     },
+     "scenarios": {
+      "type": "integer",
+      "title": "Scenarios"
+     },
+     "seed": {
+      "type": "integer",
+      "title": "Seed"
+     },
+     "objective_label": {
+      "type": "string",
+      "title": "Objective Label"
+     },
+     "opponent_model": {
+      "type": "string",
+      "title": "Opponent Model"
+     },
+     "highlighted_player_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Highlighted Player Id"
+     },
+     "candidates": {
+      "items": {
+       "$ref": "#/components/schemas/RefinedCandidate"
+      },
+      "type": "array",
+      "title": "Candidates"
+     },
+     "notes": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Notes"
+     }
+    },
+    "type": "object",
+    "required": [
+     "ids",
+     "tier",
+     "computed_ms",
+     "budget_ms",
+     "scenarios",
+     "seed",
+     "objective_label",
+     "opponent_model",
+     "highlighted_player_id",
+     "candidates",
+     "notes"
+    ],
+    "title": "RefinementResponse"
+   },
+   "ResponseIds": {
+    "properties": {
+     "draft_revision": {
+      "type": "integer",
+      "title": "Draft Revision"
+     },
+     "strategy_revision": {
+      "type": "integer",
+      "title": "Strategy Revision"
+     },
+     "league_revision": {
+      "type": "integer",
+      "title": "League Revision"
+     },
+     "last_seq": {
+      "type": "integer",
+      "title": "Last Seq"
+     },
+     "snapshot_id": {
+      "type": "string",
+      "title": "Snapshot Id"
+     },
+     "projection_version": {
+      "type": "string",
+      "title": "Projection Version"
+     },
+     "seed": {
+      "type": "integer",
+      "title": "Seed"
+     }
+    },
+    "type": "object",
+    "required": [
+     "draft_revision",
+     "strategy_revision",
+     "league_revision",
+     "last_seq",
+     "snapshot_id",
+     "projection_version",
+     "seed"
+    ],
+    "title": "ResponseIds"
+   },
+   "RiskPreference": {
+    "type": "string",
+    "enum": [
+     "conservative",
+     "neutral",
+     "aggressive"
+    ],
+    "title": "RiskPreference"
+   },
+   "RosterSlotView": {
+    "properties": {
+     "slot": {
+      "type": "string",
+      "title": "Slot"
+     },
+     "player_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Player Id"
+     },
+     "name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Name"
+     }
+    },
+    "type": "object",
+    "required": [
+     "slot",
+     "player_id",
+     "name"
+    ],
+    "title": "RosterSlotView"
+   },
+   "RosterView": {
+    "properties": {
+     "assignments": {
+      "items": {
+       "$ref": "#/components/schemas/RosterSlotView"
+      },
+      "type": "array",
+      "title": "Assignments"
+     },
+     "unassigned": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Unassigned"
+     },
+     "open_starting_slots": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Open Starting Slots"
+     },
+     "bench_used": {
+      "type": "integer",
+      "title": "Bench Used"
+     },
+     "legal": {
+      "type": "boolean",
+      "title": "Legal"
+     },
+     "caps_ok": {
+      "type": "boolean",
+      "title": "Caps Ok"
+     },
+     "cap_violations": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Cap Violations"
+     },
+     "completion_feasible": {
+      "type": "boolean",
+      "title": "Completion Feasible"
+     },
+     "completion_detail": {
+      "type": "string",
+      "title": "Completion Detail"
+     },
+     "coverage_ratio": {
+      "type": "number",
+      "title": "Coverage Ratio"
+     }
+    },
+    "type": "object",
+    "required": [
+     "assignments",
+     "unassigned",
+     "open_starting_slots",
+     "bench_used",
+     "legal",
+     "caps_ok",
+     "cap_violations",
+     "completion_feasible",
+     "completion_detail",
+     "coverage_ratio"
+    ],
+    "title": "RosterView"
+   },
+   "ScoringFormat": {
+    "type": "string",
+    "enum": [
+     "h2h_each_category",
+     "h2h_most_categories",
+     "roto"
+    ],
+    "title": "ScoringFormat"
+   },
+   "SessionCreate": {
+    "properties": {
+     "league": {
+      "$ref": "#/components/schemas/LeagueConfig"
+     },
+     "strategy": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/Strategy"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "snapshot_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Snapshot Id"
+     },
+     "name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Name"
+     }
+    },
+    "type": "object",
+    "required": [
+     "league"
+    ],
+    "title": "SessionCreate"
+   },
+   "SessionDetail": {
+    "properties": {
+     "meta": {
+      "$ref": "#/components/schemas/SessionSummary"
+     },
+     "state": {
+      "$ref": "#/components/schemas/DraftStateView"
+     }
+    },
+    "type": "object",
+    "required": [
+     "meta",
+     "state"
+    ],
+    "title": "SessionDetail"
+   },
+   "SessionSummary": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "snapshot_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Snapshot Id"
+     },
+     "created_at": {
+      "type": "string",
+      "title": "Created At"
+     },
+     "updated_at": {
+      "type": "string",
+      "title": "Updated At"
+     },
+     "last_seq": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Last Seq"
+     },
+     "n_commits": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "N Commits"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "name",
+     "snapshot_id",
+     "created_at",
+     "updated_at"
+    ],
+    "title": "SessionSummary"
+   },
+   "SnapshotMeta": {
+    "properties": {
+     "snapshot_id": {
+      "type": "string",
+      "title": "Snapshot Id"
+     },
+     "label": {
+      "type": "string",
+      "title": "Label"
+     },
+     "source": {
+      "type": "string",
+      "title": "Source"
+     },
+     "season": {
+      "type": "string",
+      "title": "Season"
+     },
+     "created_at": {
+      "type": "string",
+      "title": "Created At"
+     },
+     "n_players": {
+      "type": "integer",
+      "title": "N Players"
+     },
+     "is_demo": {
+      "type": "boolean",
+      "title": "Is Demo"
+     },
+     "adp_platform": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Adp Platform"
+     },
+     "adp_asof": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Adp Asof"
+     },
+     "rank_source": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Rank Source"
+     },
+     "health": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Health"
+     },
+     "provenance": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Provenance"
+     }
+    },
+    "type": "object",
+    "required": [
+     "snapshot_id",
+     "label",
+     "source",
+     "season",
+     "created_at",
+     "n_players",
+     "is_demo",
+     "adp_platform",
+     "adp_asof",
+     "rank_source",
+     "health",
+     "provenance"
+    ],
+    "title": "SnapshotMeta"
+   },
+   "Strategy": {
+    "properties": {
+     "mode": {
+      "type": "string",
+      "title": "Mode",
+      "description": "balanced | custom",
+      "default": "balanced"
+     },
+     "punts": {
+      "additionalProperties": {
+       "$ref": "#/components/schemas/PuntKind"
+      },
+      "type": "object",
+      "title": "Punts"
+     },
+     "weights": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Weights",
+      "description": "category -> emphasis weight"
+     },
+     "soft_punt_weight": {
+      "type": "number",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Soft Punt Weight",
+      "default": 0.35
+     },
+     "risk": {
+      "$ref": "#/components/schemas/RiskPreference",
+      "default": "neutral"
+     },
+     "suggest_punts": {
+      "type": "boolean",
+      "title": "Suggest Punts",
+      "default": false
+     },
+     "sim_budget_ms": {
+      "type": "integer",
+      "maximum": 30000.0,
+      "minimum": 100.0,
+      "title": "Sim Budget Ms",
+      "default": 4000
+     },
+     "sim_scenarios": {
+      "type": "integer",
+      "maximum": 20000.0,
+      "minimum": 20.0,
+      "title": "Sim Scenarios",
+      "default": 400
+     },
+     "projection_blend_espn_weight": {
+      "type": "number",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Projection Blend Espn Weight",
+      "default": 0.5
+     },
+     "roster_aware": {
+      "type": "boolean",
+      "title": "Roster Aware",
+      "default": false
+     },
+     "roster_scale": {
+      "type": "number",
+      "exclusiveMinimum": 0.0,
+      "title": "Roster Scale",
+      "default": 3.6
+     }
+    },
+    "type": "object",
+    "title": "Strategy"
+   },
+   "TieRule": {
+    "properties": {
+     "each_category_tie_value": {
+      "type": "number",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Each Category Tie Value",
+      "default": 0.5
+     },
+     "matchup_tie_breaker": {
+      "type": "string",
+      "enum": [
+       "none",
+       "points",
+       "total_categories"
+      ],
+      "title": "Matchup Tie Breaker",
+      "default": "none"
+     },
+     "zero_attempts": {
+      "type": "string",
+      "enum": [
+       "loss",
+       "tie",
+       "unknown"
+      ],
+      "title": "Zero Attempts",
+      "default": "unknown"
+     }
+    },
+    "type": "object",
+    "title": "TieRule",
+    "description": "How a tied category is scored.\n\neach_category_tie_value: credit for a tied category in each-category scoring (0 or 0.5).\nmost_categories_tie: in most-categories scoring, a tied category counts for neither side; the\nmatchup is a tie when category wins are equal unless ``matchup_tie_breaker`` is set.\nzero_attempts: how a team with zero attempts is treated in a ratio category."
+   },
+   "TradedPick": {
+    "properties": {
+     "round": {
+      "type": "integer",
+      "minimum": 1.0,
+      "title": "Round"
+     },
+     "from_manager_id": {
+      "type": "string",
+      "title": "From Manager Id"
+     },
+     "to_manager_id": {
+      "type": "string",
+      "title": "To Manager Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "round",
+     "from_manager_id",
+     "to_manager_id"
+    ],
+    "title": "TradedPick"
+   },
+   "ValidationError": {
+    "properties": {
+     "loc": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        }
+       ]
+      },
+      "type": "array",
+      "title": "Location"
+     },
+     "msg": {
+      "type": "string",
+      "title": "Message"
+     },
+     "type": {
+      "type": "string",
+      "title": "Error Type"
+     },
+     "input": {
+      "title": "Input"
+     },
+     "ctx": {
+      "type": "object",
+      "title": "Context"
+     }
+    },
+    "type": "object",
+    "required": [
+     "loc",
+     "msg",
+     "type"
+    ],
+    "title": "ValidationError"
+   }
+  }
+ }
+}

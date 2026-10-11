@@ -1,0 +1,293 @@
+"""SQLite-backed session store: append-only events, idempotency, optimistic concurrency, export."""
+
+from __future__ import annotations
+
+import json
+import sqlite3
+import threading
+import uuid
+from pathlib import Path
+from typing import Any
+
+from app.draft.events import SCHEMA_VERSION, DraftError, DraftState, Event, EventType, apply, now_iso, replay
+from app.league.config import LeagueConfig
+from app.league.strategy import Strategy
+
+DDL = """
+CREATE TABLE IF NOT EXISTS sessions (
+  id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+  schema_version INTEGER NOT NULL, snapshot_id TEXT, league_json TEXT NOT NULL, strategy_json TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS events (
+  session_id TEXT NOT NULL, seq INTEGER NOT NULL, type TEXT NOT NULL, payload_json TEXT NOT NULL,
+  idempotency_key TEXT NOT NULL, created_at TEXT NOT NULL, source TEXT NOT NULL,
+  PRIMARY KEY (session_id, seq), UNIQUE (session_id, idempotency_key),
+  FOREIGN KEY (session_id) REFERENCES sessions(id)
+);
+"""
+
+
+class ConflictError(Exception):
+    def __init__(self, expected: int, actual: int):
+        super().__init__(f"revision conflict: expected {expected}, actual {actual}")
+        self.expected, self.actual = expected, actual
+
+
+class SessionStore:
+    def __init__(self, path: str | Path):
+        self.path = str(path)
+        self._lock = threading.RLock()
+        self._conn = sqlite3.connect(self.path, check_same_thread=False, isolation_level=None)
+        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.execute("PRAGMA foreign_keys=ON")
+        self._conn.executescript(DDL)
+        self._state_cache: dict[str, DraftState] = {}
+
+    def close(self) -> None:
+        self._conn.close()
+
+    # --- sessions -------------------------------------------------------------------------
+    def create_session(
+        self,
+        league: LeagueConfig,
+        strategy: Strategy | None = None,
+        snapshot_id: str | None = None,
+        name: str | None = None,
+        session_id: str | None = None,
+    ) -> str:
+        strategy = strategy or Strategy()
+        sid = session_id or uuid.uuid4().hex[:12]
+        ts = now_iso()
+        with self._lock:
+            self._conn.execute("BEGIN")
+            self._conn.execute(
+                "INSERT INTO sessions VALUES (?,?,?,?,?,?,?,?)",
+                (
+                    sid,
+                    name or league.name,
+                    ts,
+                    ts,
+                    SCHEMA_VERSION,
+                    snapshot_id,
+                    league.model_dump_json(),
+                    strategy.model_dump_json(),
+                ),
+            )
+            self._conn.execute(
+                "INSERT INTO events VALUES (?,?,?,?,?,?,?)",
+                (
+                    sid,
+                    1,
+                    EventType.session_created.value,
+                    json.dumps({"snapshot_id": snapshot_id}),
+                    f"created:{sid}",
+                    ts,
+                    "system",
+                ),
+            )
+            self._conn.execute("COMMIT")
+        return sid
+
+    def list_sessions(self) -> list[dict[str, Any]]:
+        rows = self._conn.execute(
+            "SELECT s.id, s.name, s.created_at, s.updated_at, s.snapshot_id, "
+            "(SELECT MAX(seq) FROM events e WHERE e.session_id = s.id) AS last_seq, "
+            "(SELECT COUNT(*) FROM events e WHERE e.session_id = s.id AND e.type='pick_committed') AS n_commits "
+            "FROM sessions s ORDER BY s.updated_at DESC"
+        ).fetchall()
+        return [
+            dict(
+                zip(("id", "name", "created_at", "updated_at", "snapshot_id", "last_seq", "n_commits"), r, strict=True)
+            )
+            for r in rows
+        ]
+
+    def session_meta(self, session_id: str) -> dict[str, Any] | None:
+        r = self._conn.execute(
+            "SELECT id, name, created_at, updated_at, snapshot_id, schema_version FROM sessions WHERE id=?",
+            (session_id,),
+        ).fetchone()
+        if r is None:
+            return None
+        return dict(zip(("id", "name", "created_at", "updated_at", "snapshot_id", "schema_version"), r, strict=True))
+
+    def set_snapshot(self, session_id: str, snapshot_id: str) -> None:
+        with self._lock:
+            self._conn.execute(
+                "UPDATE sessions SET snapshot_id=?, updated_at=? WHERE id=?", (snapshot_id, now_iso(), session_id)
+            )
+
+    def delete_session(self, session_id: str) -> None:
+        with self._lock:
+            self._conn.execute("BEGIN")
+            self._conn.execute("DELETE FROM events WHERE session_id=?", (session_id,))
+            self._conn.execute("DELETE FROM sessions WHERE id=?", (session_id,))
+            self._conn.execute("COMMIT")
+            self._state_cache.pop(session_id, None)
+
+    # --- events ---------------------------------------------------------------------------
+    def events(self, session_id: str) -> list[Event]:
+        rows = self._conn.execute(
+            "SELECT seq, type, payload_json, idempotency_key, created_at, source FROM events "
+            "WHERE session_id=? ORDER BY seq",
+            (session_id,),
+        ).fetchall()
+        return [Event(r[0], EventType(r[1]), json.loads(r[2]), r[3], r[4], r[5]) for r in rows]
+
+    def _base(self, session_id: str) -> tuple[LeagueConfig, Strategy]:
+        r = self._conn.execute("SELECT league_json, strategy_json FROM sessions WHERE id=?", (session_id,)).fetchone()
+        if r is None:
+            raise KeyError(session_id)
+        return LeagueConfig.model_validate_json(r[0]), Strategy.model_validate_json(r[1])
+
+    def state(self, session_id: str) -> DraftState:
+        with self._lock:
+            cached = self._state_cache.get(session_id)
+            last = self._conn.execute("SELECT MAX(seq) FROM events WHERE session_id=?", (session_id,)).fetchone()[0]
+            if cached is not None and cached.last_seq == last:
+                return cached
+            league, strategy = self._base(session_id)
+            st = replay(league, self.events(session_id), strategy)
+            self._state_cache[session_id] = st
+            return st
+
+    def append(
+        self,
+        session_id: str,
+        type: EventType,
+        payload: dict[str, Any],
+        idempotency_key: str | None = None,
+        expected_revision: int | None = None,
+        source: str = "manual",
+    ) -> tuple[Event, DraftState, bool]:
+        """Validate against the current state and append. Returns (event, new_state, deduplicated).
+
+        ``expected_revision`` is the client's last seen ``last_seq``; mismatch raises ConflictError.
+        A repeated ``idempotency_key`` returns the stored event without re-applying.
+        """
+        key = idempotency_key or uuid.uuid4().hex
+        with self._lock:
+            existing = self._conn.execute(
+                "SELECT seq, type, payload_json, idempotency_key, created_at, source FROM events "
+                "WHERE session_id=? AND idempotency_key=?",
+                (session_id, key),
+            ).fetchone()
+            if existing:
+                ev = Event(
+                    existing[0], EventType(existing[1]), json.loads(existing[2]), existing[3], existing[4], existing[5]
+                )
+                return ev, self.state(session_id), True
+            st = self.state(session_id)
+            if expected_revision is not None and expected_revision != st.last_seq:
+                raise ConflictError(expected_revision, st.last_seq)
+            ev = Event(st.last_seq + 1, type, payload, key, now_iso(), source)
+            new_state = apply(st, ev)  # raises DraftError on invalid
+            self._conn.execute("BEGIN")
+            self._conn.execute(
+                "INSERT INTO events VALUES (?,?,?,?,?,?,?)",
+                (session_id, ev.seq, ev.type.value, json.dumps(ev.payload), key, ev.created_at, source),
+            )
+            self._conn.execute("UPDATE sessions SET updated_at=? WHERE id=?", (ev.created_at, session_id))
+            self._conn.execute("COMMIT")
+            self._state_cache[session_id] = new_state
+            return ev, new_state, False
+
+    def append_batch(
+        self,
+        session_id: str,
+        items: list[tuple[EventType, dict[str, Any], str | None]],
+        expected_revision: int | None = None,
+        source: str = "import",
+    ) -> DraftState:
+        """Atomic batch: all events validate and persist, or none do."""
+        with self._lock:
+            st = self.state(session_id)
+            if expected_revision is not None and expected_revision != st.last_seq:
+                raise ConflictError(expected_revision, st.last_seq)
+            evs: list[Event] = []
+            cur = st
+            for t, payload, key in items:
+                ev = Event(cur.last_seq + 1, t, payload, key or uuid.uuid4().hex, now_iso(), source)
+                cur = apply(cur, ev)
+                evs.append(ev)
+            self._conn.execute("BEGIN")
+            try:
+                for ev in evs:
+                    self._conn.execute(
+                        "INSERT INTO events VALUES (?,?,?,?,?,?,?)",
+                        (
+                            session_id,
+                            ev.seq,
+                            ev.type.value,
+                            json.dumps(ev.payload),
+                            ev.idempotency_key,
+                            ev.created_at,
+                            source,
+                        ),
+                    )
+                self._conn.execute("UPDATE sessions SET updated_at=? WHERE id=?", (now_iso(), session_id))
+                self._conn.execute("COMMIT")
+            except Exception:
+                self._conn.execute("ROLLBACK")
+                raise
+            self._state_cache[session_id] = cur
+            return cur
+
+    # --- export / import --------------------------------------------------------------------
+    def export_session(self, session_id: str) -> dict[str, Any]:
+        meta = self.session_meta(session_id)
+        if meta is None:
+            raise KeyError(session_id)
+        league, strategy = self._base(session_id)
+        return {
+            "schema_version": SCHEMA_VERSION,
+            "exported_at": now_iso(),
+            "session": meta,
+            "league": league.model_dump(mode="json"),
+            "strategy": strategy.model_dump(mode="json"),
+            "events": [e.to_dict() for e in self.events(session_id)],
+        }
+
+    def import_session(self, data: dict[str, Any], new_id: bool = True) -> str:
+        if int(data.get("schema_version", 0)) != SCHEMA_VERSION:
+            raise DraftError("schema_version", f"unsupported export schema {data.get('schema_version')}")
+        league = LeagueConfig.model_validate(data["league"])
+        strategy = Strategy.model_validate(data.get("strategy", {}))
+        events = [Event.from_dict(e) for e in data["events"]]
+        replay(league, events, strategy)  # validate the whole history before writing anything
+        sid = uuid.uuid4().hex[:12] if new_id else data["session"]["id"]
+        meta = data["session"]
+        with self._lock:
+            self._conn.execute("BEGIN")
+            try:
+                self._conn.execute(
+                    "INSERT INTO sessions VALUES (?,?,?,?,?,?,?,?)",
+                    (
+                        sid,
+                        meta.get("name", league.name),
+                        meta.get("created_at", now_iso()),
+                        now_iso(),
+                        SCHEMA_VERSION,
+                        meta.get("snapshot_id"),
+                        league.model_dump_json(),
+                        strategy.model_dump_json(),
+                    ),
+                )
+                for ev in events:
+                    self._conn.execute(
+                        "INSERT INTO events VALUES (?,?,?,?,?,?,?)",
+                        (
+                            sid,
+                            ev.seq,
+                            ev.type.value,
+                            json.dumps(ev.payload),
+                            ev.idempotency_key,
+                            ev.created_at,
+                            ev.source,
+                        ),
+                    )
+                self._conn.execute("COMMIT")
+            except Exception:
+                self._conn.execute("ROLLBACK")
+                raise
+        return sid

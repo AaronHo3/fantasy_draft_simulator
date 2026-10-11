@@ -1,0 +1,30 @@
+{
+ "schema_version": 1,
+ "snapshot_id": "demo-fd46503b91ff",
+ "label": "Synthetic demo data (not real players)",
+ "source": "demo",
+ "season": "demo",
+ "created_at": "2026-10-10T06:57:20+00:00",
+ "adp_platform": "demo",
+ "adp_asof": "2026-10-10T06:57:20+00:00",
+ "rank_source": "demo",
+ "provenance": {
+  "generator": "app.demo.generate",
+  "seed": 7,
+  "note": "synthetic"
+ },
+ "health": {
+  "players": 600,
+  "with_adp": 200,
+  "unresolved_identities": 0,
+  "missing_eligibility": 0,
+  "sources": {
+   "demo": {
+    "status": "ok"
+   }
+  }
+ },
+ "is_demo": true,
+ "team_games_per_week": {},
+ "schedule_label": "generic 3.5 games/week assumption (no schedule loaded)"
+}
