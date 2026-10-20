@@ -33,8 +33,13 @@ def _is_out(status: dict[str, dict[str, Any]], pid: str) -> bool:
     return (status.get(pid, {}).get("injury_status") or "").upper() in OUT_STATUSES
 
 
-def _best_drop(snap: Snapshot, state: DraftState, weights: np.ndarray, ir: frozenset[str]) -> tuple[str | None, float]:
-    """Roster player (not on IR) whose removal costs the least weighted z; ties -> fewest minutes."""
+def _best_drop(
+    snap: Snapshot, state: DraftState, weights: np.ndarray, ir: frozenset[str], status: dict[str, dict[str, Any]]
+) -> tuple[str | None, float]:
+    """Roster player (not on IR) whose removal costs the least weighted z; ties -> fewest minutes.
+
+    A player with no NBA team contributes nothing, so he is always the first drop.
+    """
     z = standardized(snap, state.league).z_totals
     minutes = snap.per_game[:, PRIM_IDX["MIN"]]
     best: tuple[float, float, str] | None = None
@@ -42,7 +47,8 @@ def _best_drop(snap: Snapshot, state: DraftState, weights: np.ndarray, ir: froze
         i = snap.index.get(pid)
         if i is None or pid in ir:
             continue
-        key = (float(z[i] @ weights), float(minutes[i]), pid)
+        no_team = (status.get(pid, {}).get("injury_status") or "").upper() == "NO_TEAM"
+        key = (float("-inf") if no_team else float(z[i] @ weights), float(minutes[i]), pid)
         if best is None or key < best:
             best = key
     return (best[2], best[0]) if best else (None, 0.0)
@@ -58,7 +64,7 @@ def free_agents(
     q: str | None = None,
 ) -> tuple[FreeAgent, ...]:
     res = rank_layer_a(user_context(state, snap))
-    drop_id, drop_value = _best_drop(snap, state, res.weights, ir_player_ids)
+    drop_id, drop_value = _best_drop(snap, state, res.weights, ir_player_ids, status)
     needle = normalize_name(q) if q else None
     rows: list[FreeAgent] = []
     for c in res.candidates:
@@ -77,8 +83,8 @@ def free_agents(
                 score=round(float(c.base_value), 4),
                 z={k: round(float(v), 3) for k, v in zip(res.keys, c.z, strict=True)},
                 best_drop=drop_id,
-                drop_value=round(drop_value, 4),
-                swap_delta=round(float(c.base_value) - round(drop_value, 4), 4),
+                drop_value=round(drop_value, 4) if np.isfinite(drop_value) else 0.0,
+                swap_delta=round(float(c.base_value) - (round(drop_value, 4) if np.isfinite(drop_value) else 0.0), 4),
                 injury_status=st.get("injury_status"),
                 percent_owned=st.get("percent_owned"),
                 flags=tuple(flags),

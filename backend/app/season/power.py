@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any
 
 import numpy as np
@@ -18,7 +19,13 @@ import pandas as pd
 from app.draft.events import DraftState
 from app.engine.categories import PRIM_IDX
 from app.engine.layer_a import standardized
-from app.engine.schedule_model import games_per_week_for_players
+from app.engine.schedule_model import (
+    TeamSchedule,
+    average_daily_counted_fraction,
+    build_team_schedule,
+    daily_counted_fraction,
+    games_per_week_for_players,
+)
 from app.engine.simulation import (
     SimConfig,
     category_outcomes,
@@ -26,21 +33,22 @@ from app.engine.simulation import (
     objective,
     simulate_players_week,
 )
-from app.league.config import LeagueConfig
+from app.league.config import LeagueConfig, LineupMode
 from app.projections.snapshot import Snapshot
 from app.season.weeks import games_in_window, period_window
 
 N_SCENARIOS = 600
-OUT_STATUSES = frozenset({"OUT", "SUSPENSION", "INJURY_RESERVE"})
+OUT_STATUSES = frozenset({"OUT", "SUSPENSION", "INJURY_RESERVE", "NO_TEAM"})
 
 
 @dataclass(frozen=True)
 class TeamSim:
     manager_id: str
     roster_idx: tuple[int, ...]
-    counted_idx: tuple[int, ...]  # starters by projected minutes, IR excluded
+    counted_idx: tuple[int, ...]  # weekly: starters by projected minutes; daily: every available player
     n_ir: int
     n_unknown: int
+    weights: tuple[float, ...] | None = None  # daily lineups: expected counted share per counted player
 
 
 @dataclass(frozen=True)
@@ -73,17 +81,41 @@ class MatchupOdds:
     notes: tuple[str, ...]
 
 
-def build_team_sims(snap: Snapshot, state: DraftState, ir_player_ids: frozenset[str]) -> tuple[TeamSim, ...]:
+def build_team_sims(
+    snap: Snapshot,
+    state: DraftState,
+    ir_player_ids: frozenset[str],
+    unavailable: frozenset[str] = frozenset(),
+    team_schedule: TeamSchedule | None = None,
+    week_idx: int | None = None,
+) -> tuple[TeamSim, ...]:
+    """Who counts for each team. IR and ``unavailable`` (OUT / no team) players never start.
+
+    Weekly lineups: the top ``n_starting`` available players by projected minutes. Daily lineups
+    (with a schedule): every available player, weighted by the share of their games that fit the
+    daily slots (``schedule_model.daily_counted_fraction``); without a schedule, weekly rules apply.
+    """
     n_start = len(state.league.starting_slots)
     minutes = snap.per_game[:, PRIM_IDX["MIN"]]
+    daily = state.league.lineup_mode == LineupMode.daily and team_schedule is not None
     out = []
     for mid, roster in state.current_rosters().items():
         idx = [snap.index[p] for p in roster if p in snap.index]
         n_unknown = len(roster) - len(idx)
         n_ir = sum(1 for p in roster if p in ir_player_ids)
-        eligible = [snap.index[p] for p in roster if p in snap.index and p not in ir_player_ids]
-        counted = sorted(eligible, key=lambda i: -minutes[i])[:n_start]
-        out.append(TeamSim(mid, tuple(idx), tuple(counted), n_ir, n_unknown))
+        eligible = [
+            snap.index[p] for p in roster if p in snap.index and p not in ir_player_ids and p not in unavailable
+        ]
+        if daily:
+            teams = [snap.players[i].team for i in eligible]
+            if week_idx is not None:
+                w = daily_counted_fraction(teams, n_start, team_schedule, week_idx)
+            else:
+                w = average_daily_counted_fraction(teams, n_start, team_schedule)
+            out.append(TeamSim(mid, tuple(idx), tuple(eligible), n_ir, n_unknown, tuple(float(x) for x in w)))
+        else:
+            counted = sorted(eligible, key=lambda i: -minutes[i])[:n_start]
+            out.append(TeamSim(mid, tuple(idx), tuple(counted), n_ir, n_unknown))
     return tuple(out)
 
 
@@ -122,11 +154,13 @@ def power_rankings(
     seed: int,
     ir_player_ids: frozenset[str] = frozenset(),
     n_scenarios: int = N_SCENARIOS,
+    unavailable: frozenset[str] = frozenset(),
+    team_schedule: TeamSchedule | None = None,
 ) -> tuple[TeamPower, ...]:
     league = state.league
     cats, tie = league.categories, league.tie_rule
     keys = [c.key for c in cats]
-    teams = build_team_sims(snap, state, ir_player_ids)
+    teams = build_team_sims(snap, state, ir_player_ids, unavailable, team_schedule)
     totals = simulate_league_week(snap, league, teams, seed, n_scenarios)
     z_tot = standardized(snap, league).z_totals
     rows: list[dict[str, Any]] = []
@@ -184,6 +218,13 @@ def _period_games(
     return np.array([float(counts.get(p.team or "", 0)) for p in snap.players])
 
 
+def _week_index(ts: TeamSchedule, season: str, period: int) -> int | None:
+    """Index of the schedule week containing the period's first Monday (None when out of range)."""
+    first = period_window(season, period)[0]
+    monday = (first - timedelta(days=first.weekday())).isoformat()
+    return ts.weeks.index(monday) if monday in ts.weeks else None
+
+
 def matchup_odds(
     snap: Snapshot,
     state: DraftState,
@@ -200,15 +241,19 @@ def matchup_odds(
     cats, tie = league.categories, league.tie_rule
     notes: list[str] = []
     games = _period_games(snap, schedule, league.season, period, notes)
-    sims = {t.manager_id: t for t in build_team_sims(snap, state, ir_player_ids)}
     involved = state.current_roster(a) + state.current_roster(b)
-    zero = frozenset(p for p in involved if (status.get(p, {}).get("injury_status") or "").upper() in OUT_STATUSES) | (
-        frozenset(p for p in involved if p in ir_player_ids)
-    )
+    out_status = {p: (status.get(p, {}).get("injury_status") or "").upper() for p in involved}
+    zero = frozenset(p for p in involved if out_status[p] in OUT_STATUSES or p in ir_player_ids)
+    ts = build_team_schedule(schedule) if schedule is not None and league.lineup_mode == LineupMode.daily else None
+    week_idx = _week_index(ts, league.season, period) if ts is not None else None
+    if ts is not None:
+        notes.append("daily lineups: every available player counts, weighted by the days a slot is free for him")
+    sims = {t.manager_id: t for t in build_team_sims(snap, state, ir_player_ids, zero, ts, week_idx)}
     for pid in sorted(zero):
         i = snap.index.get(pid)
         if i is not None:
-            notes.append(f"{snap.players[i].name} is OUT / on IR: 0 games this week")
+            why = "has no NBA team" if out_status[pid] == "NO_TEAM" else "is OUT / on IR"
+            notes.append(f"{snap.players[i].name} {why}: 0 games this week")
     totals = simulate_league_week(snap, league, (sims[a], sims[b]), seed, n_scenarios, games, zero)
     out = category_outcomes(totals[a], totals[b], cats, tie)
     obj_a = objective(out, league.scoring_format, tie)

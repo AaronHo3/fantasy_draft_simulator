@@ -56,6 +56,15 @@ class AppContext:
             self._schedule_loaded = True
         return self._schedule
 
+    def team_schedule(self):
+        """Per-team game days by week, built once from the schedule parquet (None when not fetched)."""
+        from app.engine.schedule_model import build_team_schedule
+
+        if not hasattr(self, "_team_schedule"):
+            sched = self.get_schedule()
+            self._team_schedule = build_team_schedule(sched) if sched is not None else None
+        return self._team_schedule
+
     def live_status(self, league_id: int) -> pd.DataFrame | None:
         if league_id not in self._live:
             self._live[league_id] = read_live_status(self.settings.live_dir, league_id)

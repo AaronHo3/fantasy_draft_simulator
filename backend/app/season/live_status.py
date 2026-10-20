@@ -14,6 +14,7 @@ import pandas as pd
 from app.projections.snapshot import Snapshot
 
 LIVE_COLUMNS: tuple[str, ...] = ("espn_id", "injury_status", "percent_owned", "team", "fetched_at")
+NO_TEAM = "NO_TEAM"
 
 
 def write_live_status(live_dir: Path, league_id: int, players: pd.DataFrame) -> Path:
@@ -47,13 +48,23 @@ def status_overlay(snap: Snapshot, live: pd.DataFrame | None) -> dict[str, dict[
             if eid is None or pd.isna(eid):
                 continue
             pct = getattr(row, "percent_owned", None)
+            team = getattr(row, "team", None)
+            team = None if team is None or (isinstance(team, float) and pd.isna(team)) or team == "" else str(team)
+            status = None if pd.isna(row.injury_status) else str(row.injury_status)
             by_espn[int(eid)] = {
-                "injury_status": None if pd.isna(row.injury_status) else str(row.injury_status),
+                # a player ESPN lists with no NBA team (waived, unsigned) cannot play: treated like OUT
+                "injury_status": NO_TEAM if team is None else status,
                 "percent_owned": None if pct is None or pd.isna(pct) else float(pct),
+                "team": team,
                 "fetched_at": str(row.fetched_at),
             }
     out: dict[str, dict[str, Any]] = {}
     for p in snap.players:
         hit = by_espn.get(p.espn_id) if p.espn_id else None
-        out[p.player_id] = hit or {"injury_status": p.injury_status, "percent_owned": None, "fetched_at": None}
+        out[p.player_id] = hit or {
+            "injury_status": p.injury_status,
+            "percent_owned": None,
+            "team": p.team,
+            "fetched_at": None,
+        }
     return out

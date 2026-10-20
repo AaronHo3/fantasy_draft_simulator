@@ -201,8 +201,31 @@ def _calendar_warning(season: str, league: EspnLeague, warnings: list[str]) -> N
         )
 
 
+def _no_team_ids(ctx: AppContext, snap, league_id: int | None) -> frozenset[str]:
+    status = status_overlay(snap, ctx.live_status(league_id) if league_id else None)
+    return frozenset(pid for pid, s in status.items() if (s.get("injury_status") or "").upper() == "NO_TEAM")
+
+
+def _team_schedule(ctx: AppContext, state: DraftState):
+    sched = ctx.get_schedule()
+    if sched is None or state.league.lineup_mode != "daily":
+        return None
+    return ctx.team_schedule()
+
+
+def _power(ctx: AppContext, snap, state: DraftState, league: EspnLeague | None, seed: int):
+    return power_rankings(
+        snap,
+        state,
+        seed,
+        _ir_ids(league, snap),
+        unavailable=_no_team_ids(ctx, snap, state.league.espn_league_id),
+        team_schedule=_team_schedule(ctx, state),
+    )
+
+
 def _power_rows(ctx: AppContext, snap, state: DraftState, league: EspnLeague | None) -> list[dict[str, Any]]:
-    return [p.__dict__ for p in power_rankings(snap, state, ctx.settings.default_seed, _ir_ids(league, snap))]
+    return [p.__dict__ for p in _power(ctx, snap, state, league, ctx.settings.default_seed)]
 
 
 def run_sync(ctx: AppContext, session_id: str, expected_revision: int | None) -> S.SyncResult:
@@ -447,7 +470,7 @@ def overview(ctx: AppContext, session_id: str, seed: int | None, period: int | N
     rec = ctx.store.get_sync(session_id)
     league_id = state.league.espn_league_id
     league = cached_league(ctx, league_id, state.league.season) if league_id else None
-    power = power_rankings(snap, state, seed, _ir_ids(league, snap))
+    power = _power(ctx, snap, state, league, seed)
     movement: dict[str, int] = {}
     prev = (rec or {}).get("previous_power") or None
     if prev:

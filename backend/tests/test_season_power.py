@@ -194,7 +194,7 @@ def test_matchup_odds_out_player_zero_games(snap, state):
         ir_player_ids=frozenset(),
         n_scenarios=400,
     )
-    assert hurt.expected_a < base.expected_a and hurt.games_a < base.games_a
+    assert hurt.expected_a < base.expected_a and hurt.games_a <= base.games_a  # bench promoted, star gone
     assert any("OUT" in n for n in hurt.notes)
 
 
@@ -270,3 +270,109 @@ def test_week_results_from_scorebystat(state):
     assert r.home.cats_won == 2 + 0.5 * (n_cats - 4) and r.away.cats_won == 2 + 0.5 * (n_cats - 4)
     b = next(x for x in res if x.away is None)
     assert b.home.manager_id == "m03" and b.home.values["FG_PCT"] is None and b.home.cats_won == 0.0
+
+
+# --- daily lineups and unavailable players -------------------------------------------------------
+
+
+def four_day_schedule(snap):
+    """Every NBA team plays Mon-Thu of the week of 2026-10-19 (the model's week 0)."""
+    teams = sorted({p.team for p in snap.players if p.team})
+    rows = []
+    gid = 1
+    for day in ("19", "20", "21", "22"):
+        for t in teams:
+            rows.append(
+                {"game_id": gid, "date_utc": f"2026-10-{day}T23:00:00+00:00", "home_team": t, "away_team": "ZZZ"}
+            )
+            gid += 1
+    return pd.DataFrame(rows)
+
+
+def daily_state(state):
+    from dataclasses import replace as dc_replace
+
+    return dc_replace(state, league=state.league.model_copy(update={"lineup_mode": "daily"}))
+
+
+def test_daily_mode_counts_every_available_player_with_collision_weights(snap, state):
+    from app.engine.schedule_model import build_team_schedule
+
+    ts = build_team_schedule(four_day_schedule(snap))
+    sims = {
+        t.manager_id: t for t in build_team_sims(snap, daily_state(state), frozenset(), team_schedule=ts, week_idx=0)
+    }
+    me = sims["m01"]
+    assert len(me.counted_idx) == 5 and me.weights is not None and len(me.weights) == 5
+    # five players with a game every day for three slots: each is counted 3/5 of the time
+    assert all(abs(w - 0.6) < 1e-9 for w in me.weights)
+    weekly = {t.manager_id: t for t in build_team_sims(snap, state, frozenset())}
+    assert weekly["m01"].weights is None and len(weekly["m01"].counted_idx) == 3
+
+
+def test_daily_mode_without_schedule_falls_back_to_weekly(snap, state):
+    sims = {t.manager_id: t for t in build_team_sims(snap, daily_state(state), frozenset(), team_schedule=None)}
+    assert sims["m01"].weights is None and len(sims["m01"].counted_idx) == 3
+
+
+def test_unavailable_player_never_starts_in_either_mode(snap, state):
+    from app.engine.schedule_model import build_team_schedule
+
+    roster = state.current_roster("m01")
+    star = max(roster, key=lambda p: snap.per_game[snap.index[p], PRIM_IDX["MIN"]])
+    weekly = {t.manager_id: t for t in build_team_sims(snap, state, frozenset(), unavailable=frozenset({star}))}
+    assert snap.index[star] not in weekly["m01"].counted_idx and len(weekly["m01"].counted_idx) == 3  # bench promoted
+    ts = build_team_schedule(four_day_schedule(snap))
+    daily = {
+        t.manager_id: t
+        for t in build_team_sims(
+            snap, daily_state(state), frozenset(), unavailable=frozenset({star}), team_schedule=ts, week_idx=0
+        )
+    }
+    assert snap.index[star] not in daily["m01"].counted_idx and len(daily["m01"].counted_idx) == 4
+    assert all(abs(w - 0.75) < 1e-9 for w in daily["m01"].weights)  # four left for three slots
+
+
+def test_matchup_odds_daily_uses_bench_and_benches_no_team_player(snap, state):
+    sched = four_day_schedule(snap)
+    st = daily_state(state)
+    base = matchup_odds(
+        snap,
+        st,
+        "m01",
+        "m03",
+        period=1,
+        seed=3,
+        schedule=sched,
+        status=healthy(snap),
+        ir_player_ids=frozenset(),
+        n_scenarios=300,
+    )
+    assert any("daily" in n for n in base.notes)
+    roster = state.current_roster("m01")
+    star = max(roster, key=lambda p: snap.per_game[snap.index[p], PRIM_IDX["MIN"]])
+    gone = dict(healthy(snap))
+    gone[star] = {"injury_status": "NO_TEAM", "percent_owned": None, "fetched_at": None}
+    hurt = matchup_odds(
+        snap,
+        st,
+        "m01",
+        "m03",
+        period=1,
+        seed=3,
+        schedule=sched,
+        status=gone,
+        ir_player_ids=frozenset(),
+        n_scenarios=300,
+    )
+    assert hurt.expected_a < base.expected_a
+    assert any("no NBA team" in n for n in hurt.notes)
+
+
+def test_free_agents_best_drop_is_the_player_without_a_team(snap, state):
+    status = healthy(snap)
+    roster = state.current_roster("m01")
+    star = max(roster, key=lambda p: snap.per_game[snap.index[p], PRIM_IDX["MIN"]])
+    status[star] = {"injury_status": "NO_TEAM", "percent_owned": None, "fetched_at": None}
+    fas = free_agents(snap, state, status, ir_player_ids=frozenset(), limit=3)
+    assert all(f.best_drop == star for f in fas)
