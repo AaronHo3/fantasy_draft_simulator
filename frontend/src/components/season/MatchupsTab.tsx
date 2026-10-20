@@ -3,7 +3,6 @@ import { MatchupCard } from './MatchupCard'
 
 export function MatchupsTab({ sessionId, userId }: { sessionId: string; userId: string }) {
   const overview = useSeasonStore((s) => s.overview)
-  const period = useSeasonStore((s) => s.period)
   const setPeriod = useSeasonStore((s) => s.setPeriod)
   const loadOverview = useSeasonStore((s) => s.loadOverview)
   if (!overview) return null
@@ -15,7 +14,7 @@ export function MatchupsTab({ sessionId, userId }: { sessionId: string; userId: 
         <label htmlFor="period">Matchup period</label>
         <select
           id="period"
-          value={period ?? overview.current_period}
+          value={overview.current_period}
           onChange={(e) => {
             const p = Number(e.target.value)
             setPeriod(p)

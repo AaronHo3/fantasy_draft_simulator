@@ -116,7 +116,7 @@ export function createSeasonStore(overrides: Partial<SeasonDeps> = {}) {
         try {
           const overview = await api.seasonOverview(sessionId, { period })
           if (mySeq !== overviewSeq) return
-          set({ overview, overviewStatus: 'ready', period: period ?? overview.current_period })
+          set({ overview, overviewStatus: 'ready', period: overview.current_period }) // the period actually shown
         } catch (e) {
           if (mySeq !== overviewSeq) return
           set({ overviewStatus: 'error', overviewError: errorText(e) })

@@ -1385,6 +1385,9 @@ legend {
 .cat-grid.two-sided .cat.fav-a .side.lead .fill {
   background: var(--ok);
 }
+.matchup-card.compact .cat-grid.two-sided {
+  grid-template-columns: 1fr;
+}
 .matchup-card.compact .cat-grid.two-sided .cat {
   grid-template-columns: 70px 1fr 1fr;
 }
