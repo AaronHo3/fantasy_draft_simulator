@@ -58,3 +58,19 @@ def test_validation_errors():
         LeagueConfig(managers=ms, user_manager_id="a", starting_slots=["PG", "BENCH"])
     with pytest.raises(ValueError):
         LeagueConfig(managers=ms, user_manager_id="a", position_caps={"GUARD": 3})
+
+
+def test_league_config_espn_fields_validate():
+    from app.league.config import LeagueConfig, demo_league_config
+
+    cfg = demo_league_config(user_pick=1, n_managers=3)
+    assert cfg.espn_league_id is None and cfg.espn_team_ids == {} and cfg.espn_linked_at is None
+    linked = cfg.model_copy(update={"espn_league_id": 2075231076, "espn_team_ids": {"m01": 1, "m02": 7}})
+    rt = LeagueConfig.model_validate_json(linked.model_dump_json())
+    assert rt.espn_team_ids == {"m01": 1, "m02": 7}
+    import pytest
+
+    with pytest.raises(ValueError):
+        LeagueConfig.model_validate({**cfg.model_dump(mode="json"), "espn_team_ids": {"m01": 1, "m02": 1}})
+    with pytest.raises(ValueError):
+        LeagueConfig.model_validate({**cfg.model_dump(mode="json"), "espn_team_ids": {"zz": 1}})

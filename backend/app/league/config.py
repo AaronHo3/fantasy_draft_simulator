@@ -176,6 +176,10 @@ class LeagueConfig(BaseModel):
     regular_season_weeks: int = 19
     playoff_weeks: int = 3
     strict_eligibility: bool = False  # exclude players with unverified eligibility when True
+    # Optional read-only link to a public ESPN league (set by the link flow, never by hand).
+    espn_league_id: int | None = Field(default=None, gt=0)
+    espn_team_ids: dict[str, int] = Field(default_factory=dict, description="manager id -> ESPN team id")
+    espn_linked_at: str | None = None
 
     @property
     def roster_size(self) -> int:
@@ -214,6 +218,10 @@ class LeagueConfig(BaseModel):
             object.__setattr__(self, "draft_order", list(ids))
         if sorted(self.draft_order) != sorted(ids):
             raise ValueError("draft_order must be a permutation of manager ids")
+        if any(m not in ids for m in self.espn_team_ids):
+            raise ValueError("espn_team_ids keys must be manager ids")
+        if len(set(self.espn_team_ids.values())) != len(self.espn_team_ids):
+            raise ValueError("espn_team_ids must map each manager to a distinct ESPN team")
         for s in self.starting_slots:
             if s not in SLOT_COMPATIBILITY or s in ("BENCH", "IR"):
                 raise ValueError(f"unknown starting slot {s!r}")
