@@ -32,6 +32,8 @@ make evaluate       # paired mock-draft strategy test -> docs/EVALUATION.md
 make test           # pytest + vitest + tsc;  make e2e = Playwright full draft loop
 make bench          # engine latency benchmark, writes docs/BENCHMARKS.md
 make export SESSION=<id>   # portable JSON session export;  make import FILE=<json>
+make link SESSION=<id> LEAGUE=<espn league id>   # map managers to a public ESPN league (read-only)
+make sync SESSION=<id>     # pull rosters/matchups/transactions from ESPN; make season SESSION=<id> prints the week
 ```
 Ports 8000/5173 may be used by other projects on this machine: `make dev BACKEND_PORT=8020 FRONTEND_PORT=5180`.
 
@@ -55,6 +57,7 @@ See `docs/USER_GUIDE.md` for draft-day workflow and `docs/DATA_SOURCES.md` for e
   mixes with real snapshots under `data/nba/` (gitignored).
 - No LLM, provider fetch, or network call on the pick-commit or fast-ranking path.
 - Private ESPN cookies (optional, read-only) come only from `backend/.env`; never logged,
-  exported, stored in the browser, or committed.
+  exported, stored in the browser, or committed. The league link reads public leagues only and never
+  writes to ESPN; post-draft rosters are `roster_changed` events, never a mutable table.
 - Pure ranking functions in `backend/app/engine/*` take arrays/dataclasses and return new values;
   no mutation of inputs.

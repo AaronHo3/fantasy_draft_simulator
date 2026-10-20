@@ -1,5 +1,24 @@
 # Progress
 
+## 2026-10-19 — ESPN league link and in-season tracking (DEC-24..27)
+Spec `docs/superpowers/specs/2026-10-19-espn-league-link-design.md`, plan
+`docs/superpowers/plans/2026-10-19-espn-league-link.md`, branch `feat/espn-league-link`.
+- Backend: `sources/espn_league.py` (public league parser, verified on league 2075231076),
+  `season/{weeks,link,sync,live_status,power,free_agents,results,service}.py`, `roster_changed`
+  events, `session_sync` cache, routes `POST /espn/link`, `/espn/link/apply`, `/espn/sync`,
+  `GET /season/{overview,matchup,free-agents,results}`, CLI `espn-link`, `espn-sync`, `season`
+  (ESPN results when linked), `make link SESSION= LEAGUE=`, `make sync SESSION=`.
+- Frontend: Season screen (SyncBar, LinkDialog, Matchups, Power rankings, Free agents, Results),
+  `seasonStore` with auto-refresh, teams views show post-draft adds.
+- Verified here: backend 210 tests (incl. 17 season API, 8 analytics, 7 link/sync, 6 parser),
+  frontend 35 unit, 3 e2e (new `season.spec.ts`: link → sync → matchups → power → free agents →
+  results with ESPN mocked at the network layer). Real league: `espn-link` mapped 13/13 teams
+  (high confidence), first `espn-sync` recorded 5 adds / 3 drops across 2 teams (George Hu's
+  Ayton/Poole/Braun/+1 and Kevin Pi's waiver claim) from ESPN's transaction log, week-1 odds and
+  power rankings printed; all four UI tabs render on the live league with no console errors.
+- Open: ESPN says lineups lock per game (daily) while the session is weekly — surfaced as a warning,
+  not applied. Period calendar derived (period 1 = Oct 20–25); confirm against ESPN after week 1.
+
 ## Current status (2026-10-10)
 
 Phases 0–6 delivered as a working MVP. Everything below was actually run on this machine (Apple

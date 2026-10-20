@@ -8,6 +8,8 @@ Under the hood, it builds its own player projections from ten seasons of NBA dat
 
 In paired mock drafts on past seasons, the recommendations beat ADP-style drafting by about half a category per weekly matchup. 
 
+After the draft it links to a public ESPN league (read-only) and keeps rosters, weekly matchup odds, power rankings, free-agent pickups and results current.
+
 Runs entirely on your laptop with no accounts and no ESPN credentials (FastAPI + React), also works offline once data is cached. 
 
 

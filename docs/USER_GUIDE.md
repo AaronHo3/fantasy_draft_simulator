@@ -111,6 +111,35 @@ Apply is always an explicit click; it sets a fixed punt (weight 0 in the ranking
 Re-run after each of your picks until you commit, usually by round 4 or 5; one punt is normal,
 two is the practical maximum.
 
+## In season: link the ESPN league
+
+Once the draft is complete a **Season** tab appears.
+
+1. In ESPN, make the league viewable to the public (League → Settings → Basic Settings). The app
+   reads it without cookies and never writes to ESPN.
+2. Open Season, paste the number after `leagueId=` from your ESPN URL, click **Preview mapping**.
+   Each session manager is matched to an ESPN team by roster overlap (owner names only break
+   ties); fix any pair with the dropdown, then **Link and sync**. CLI: `make link SESSION=<id>
+   LEAGUE=<league id>`.
+3. **Sync now** (or `make sync SESSION=<id>`) pulls every roster, the matchup schedule, the
+   transaction log and live player status. Roster differences are recorded as one
+   `roster_changed` event per sync (drops before adds, so a trade is atomic) and shown in the bar
+   ("George Hu: +Ayton +Poole −Ighodaro…"). A sync that finds nothing new writes nothing.
+   Auto-refresh (15 or 60 min) re-syncs while the page is open.
+4. Tabs:
+   - **Matchups** — this week's ESPN pairings with the projected odds for every pair; your card is
+     first with per-category win chances. Odds use the real NBA games in that week; ESPN OUT and IR
+     players play zero games. Use the period selector to look ahead.
+   - **Power rankings** — expected categories won per week against the league, with movement since
+     the previous sync. IR players never count as starters.
+   - **Free agents** — unowned players ranked by what they add to *your* roster, the cheapest drop
+     to make room, and the net change; live injury status and percent owned; search and position
+     filters; click a name for the drawer.
+   - **Results** — ESPN's actual per-category results for a week next to the projected odds.
+5. Settings differences ESPN reports (for this league: lineups lock per game, i.e. daily, while the
+   session is set to weekly) are shown as warnings and never applied automatically; change the
+   session in Setup if you want the simulation to use daily lineups.
+
 ## Corrections and undo
 
 - **Undo last pick**: the "Undo #n" button in the scoreboard (only the most recent committed pick

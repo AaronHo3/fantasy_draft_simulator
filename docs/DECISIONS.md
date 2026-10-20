@@ -182,3 +182,31 @@ model cannot see are adjusted in the snapshot build instead:
   the baseline + ESPN blend), which is why the adjustment lives in the build.
 Players with a short last season (Kessler 5 GP, Tatum 16 GP) need no special case: their games-played
 history already pulls the learned model's availability projection down (56 and 62 games).
+
+## DEC-24 — 2026-10-19 — Post-draft rosters are events, not a roster table
+Adds, drops and trades after the draft are `roster_changed` events replayed like picks
+(`DraftState.current_roster`, `owned_player_ids`); the draft record itself is locked once any exist.
+One event carries every manager's moves of a sync, drops applied before adds, so a two-team trade
+cannot half-apply. Sync bookkeeping that is not league truth (fetched_at, change summary, the
+power table for movement arrows) lives in a `session_sync` cache row; a no-change sync writes no
+events so auto-refresh never churns revisions.
+
+## DEC-25 — 2026-10-19 — ESPN team mapping by roster overlap
+Session managers map to ESPN teams by the share of their drafted players found on the ESPN roster
+(greedy maximum assignment; normalized owner-name similarity only breaks ties), with manual
+overrides in the link dialog. Names alone fail ("Kurdi" vs "Abdullah Alkurdi", "Tim" vs "Timothy").
+On the real league all 13 teams matched at 100 % overlap except the team that had already made
+moves (77 %).
+
+## DEC-26 — 2026-10-19 — ESPN actuals replace nba_api standings when linked
+`make season` and the Results tab read per-category weekly scores from ESPN's matchup
+`scoreByStat` (FG%/FT% recomputed from makes/attempts ids 13–16) once the session is linked; the
+nba_api game-log tracker remains behind `--nba-logs` for unlinked sessions.
+
+## DEC-27 — 2026-10-19 — Week odds use the real schedule and ESPN status; power uses season averages
+Matchup odds for a specific period simulate each player's actual games in that Monday-anchored
+window (`data/nba/normalized/schedule.parquet`; season-average fallback with a note when the
+schedule is missing); players ESPN lists OUT or in an IR slot play zero games that week, DAY_TO_DAY
+keeps the projected availability. Power rankings use the season projection with IR players excluded
+from counted starters. The projection snapshot stays immutable; live status is an overlay written by
+sync. Measured on the real league: power rankings 0.27 s, one matchup 0.22 s (600 scenarios).

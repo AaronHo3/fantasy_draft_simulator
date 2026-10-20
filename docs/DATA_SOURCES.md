@@ -70,6 +70,33 @@ was inspected. Anything else is marked planned or unverified.
 - Caveat: undocumented endpoint used by ESPN's own web client; schema validated on every fetch,
   failures fall back to the last snapshot.
 
+## ESPN league read endpoint (public leagues, no cookies) — verified 2026-10-19
+
+- `GET /apis/v3/games/fba/seasons/{seasonId}/segments/0/leagues/{leagueId}` with
+  `view=mTeam&view=mRoster&view=mSettings&view=mMatchup&view=mSchedule&view=mTransactions2&view=mStatus`
+  (adapter: `backend/app/sources/espn_league.py`; service: `backend/app/season/service.py`).
+- Works without cookies only when the league is set to "Make League Viewable to Public"
+  (League → Settings → Basic Settings). A private league answers HTTP 401 → `LeagueAccessError`
+  → API 409 `league_private` with that instruction. Cookies are not used by this path.
+- Verified on league 2075231076 (13 teams) from this machine, HTTP 200: `settings` (name,
+  `scoringSettings.scoringType=H2H_CATEGORY`, `scoringItems[].statId` 0/1/2/3/6/17/19/20,
+  `rosterSettings.lineupSlotCounts`, `positionLimits` ("5": 4 = max 4 C), `lineupLocktimeType`),
+  `status.currentMatchupPeriod`, `members[]` (id, firstName, lastName), `teams[]` (id, name,
+  owners, primaryOwner, record, `roster.entries[]` with `playerId`, `lineupSlotId` (13 = IR),
+  `injuryStatus`, `acquisitionType`, `playerPoolEntry.player.{id,fullName,proTeamId}`),
+  `schedule[]` (id, matchupPeriodId, home/away `{teamId, cumulativeScore.scoreByStat{statId:
+  {score,result}}}`; `away` absent on a bye week), `transactions[]` (type DRAFT / ROSTER / WAIVER /
+  FREEAGENT / FUTURE_ROSTER / TRADE_ACCEPT, status EXECUTED / CANCELED / FAILED_*, `items[]` with
+  type ADD / DROP / LINEUP / DRAFT / TRADE, playerId, fromTeamId, toTeamId, `proposedDate` ms).
+- All 171 rostered player ids resolved to snapshot players through `espn_id`; unknown ids are kept
+  as owned placeholders `espn:<id>` (no projection) so they never appear as free agents.
+- Sync also refreshes `/players?view=kona_player_info` (above) for live injury status and
+  percent owned; written to `data/nba/live/<league_id>/players.parquet` (gitignored). The raw league
+  payload is cached at `data/nba/live/<league_id>/league.json` so results survive a restart.
+- Matchup periods are Monday-anchored weeks; period 1 = 2026-10-20..2026-10-25
+  (`backend/app/season/weeks.py`). ESPN's `matchupPeriods` map returned singletons, so the
+  calendar is derived, not read; verify against ESPN once week-1 scores post.
+
 ## espn_api (community client, `espn_api==1.0.1`)
 
 Inspected `espn_api/basketball/constant.py`, `league.py`, `player.py`, `requests/espn_requests.py`
