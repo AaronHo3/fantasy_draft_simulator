@@ -20,6 +20,14 @@ import type {
   SessionDetail,
   SessionSummary,
   SnapshotMeta,
+  LinkRequest,
+  LinkPreview,
+  LinkApplyRequest,
+  SyncResult,
+  SeasonOverview,
+  MatchupResponse,
+  FreeAgentsResponse,
+  WeekResultsResponse,
 } from './types'
 
 export class ApiError extends Error {
@@ -99,6 +107,13 @@ export interface ApiClient {
   template(kind: ImportKind): Promise<string>
   importPreview(id: string, kind: ImportKind, text: string): Promise<ImportPreviewView>
   importApply(id: string, kind: ImportKind, text: string, skipErrorRows: boolean, expectedRevision?: number | null): Promise<ImportApplyResponse>
+  espnLinkPreview(id: string, body: LinkRequest): Promise<LinkPreview>
+  espnLinkApply(id: string, body: LinkApplyRequest): Promise<SessionDetail>
+  espnSync(id: string, expectedRevision?: number | null): Promise<SyncResult>
+  seasonOverview(id: string, opts?: { seed?: number; period?: number | null }): Promise<SeasonOverview>
+  seasonMatchup(id: string, period: number, teamA: string, teamB: string): Promise<MatchupResponse>
+  seasonFreeAgents(id: string, opts?: { limit?: number; position?: string | null; q?: string | null }): Promise<FreeAgentsResponse>
+  seasonResults(id: string, period: number): Promise<WeekResultsResponse>
 }
 
 export function createApiClient(fetchImpl: FetchLike = (i, o) => fetch(i, o), base = '/api'): ApiClient {
@@ -157,6 +172,17 @@ export function createApiClient(fetchImpl: FetchLike = (i, o) => fetch(i, o), ba
     importPreview: (id, kind, text) => request('POST', `/sessions/${encodeURIComponent(id)}/import/preview`, { kind, text }),
     importApply: (id, kind, text, skipErrorRows, expectedRevision = null) =>
       request('POST', `/sessions/${encodeURIComponent(id)}/import/apply`, { kind, text, skip_error_rows: skipErrorRows, expected_revision: expectedRevision }),
+    espnLinkPreview: (id, body) => request('POST', `/sessions/${encodeURIComponent(id)}/espn/link`, body),
+    espnLinkApply: (id, body) => request('POST', `/sessions/${encodeURIComponent(id)}/espn/link/apply`, body),
+    espnSync: (id, expectedRevision = null) =>
+      request('POST', `/sessions/${encodeURIComponent(id)}/espn/sync`, { expected_revision: expectedRevision }),
+    seasonOverview: (id, opts = {}) =>
+      request('GET', `/sessions/${encodeURIComponent(id)}/season/overview${qs({ seed: opts.seed, period: opts.period })}`),
+    seasonMatchup: (id, period, teamA, teamB) =>
+      request('GET', `/sessions/${encodeURIComponent(id)}/season/matchup${qs({ period, team_a: teamA, team_b: teamB })}`),
+    seasonFreeAgents: (id, opts = {}) =>
+      request('GET', `/sessions/${encodeURIComponent(id)}/season/free-agents${qs({ limit: opts.limit, position: opts.position, q: opts.q })}`),
+    seasonResults: (id, period) => request('GET', `/sessions/${encodeURIComponent(id)}/season/results${qs({ period })}`),
   }
 }
 

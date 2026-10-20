@@ -41,6 +41,13 @@ function fakeApi(state: DraftStateView, overrides: Partial<ApiClient> = {}): Api
     template: () => Promise.reject(new Error('not implemented in fake')),
     importPreview: notImpl,
     importApply: notImpl,
+    espnLinkPreview: notImpl,
+    espnLinkApply: notImpl,
+    espnSync: notImpl,
+    seasonOverview: notImpl,
+    seasonMatchup: notImpl,
+    seasonFreeAgents: notImpl,
+    seasonResults: notImpl,
     ...overrides,
   }
 }

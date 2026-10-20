@@ -5,13 +5,15 @@ import { browserStorage, SESSION_KEY } from './lib/storage'
 import { DraftScreen } from './screens/DraftScreen'
 import { HealthScreen } from './screens/HealthScreen'
 import { RecapScreen } from './screens/RecapScreen'
+import { SeasonScreen } from './screens/SeasonScreen'
 import { SetupScreen } from './screens/SetupScreen'
 import { useDraftStore } from './store/draftStore'
 
-const NAV: { route: Route; label: string }[] = [
+const NAV: { route: Route; label: string; afterDraft?: boolean }[] = [
   { route: 'setup', label: 'Setup' },
   { route: 'draft', label: 'Draft' },
   { route: 'recap', label: 'Recap' },
+  { route: 'season', label: 'Season', afterDraft: true },
   { route: 'health', label: 'Data health' },
 ]
 
@@ -42,6 +44,9 @@ export default function App() {
     case 'recap':
       screen = <RecapScreen />
       break
+    case 'season':
+      screen = <SeasonScreen />
+      break
     default:
       screen = isComplete ? <RecapScreen /> : <DraftScreen />
   }
@@ -51,7 +56,7 @@ export default function App() {
       <header className="app-header">
         <span className="brand">9-cat Draft Copilot</span>
         <nav aria-label="Main">
-          {NAV.map((n) => (
+          {NAV.filter((n) => !n.afterDraft || isComplete).map((n) => (
             <a key={n.route} href={buildUrl(n.route, sessionId)} aria-current={loc.route === n.route ? 'page' : undefined}>
               {n.label}
             </a>

@@ -2,14 +2,14 @@
 //   http://127.0.0.1:5173/?session=abc123#/draft
 import { useEffect, useState } from 'react'
 
-export type Route = 'setup' | 'draft' | 'health' | 'recap'
+export type Route = 'setup' | 'draft' | 'health' | 'recap' | 'season'
 
 export interface Location {
   route: Route
   sessionId: string | null
 }
 
-const ROUTES: Route[] = ['setup', 'draft', 'health', 'recap']
+const ROUTES: Route[] = ['setup', 'draft', 'health', 'recap', 'season']
 
 export function parseLocation(search: string, hash: string): Location {
   const sessionId = new URLSearchParams(search).get('session')
