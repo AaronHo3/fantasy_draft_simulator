@@ -943,6 +943,461 @@
      }
     }
    }
+  },
+  "/api/sessions/{session_id}/espn/link": {
+   "post": {
+    "summary": "Link Preview",
+    "operationId": "link_preview_api_sessions__session_id__espn_link_post",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LinkRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LinkPreview"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sessions/{session_id}/espn/link/apply": {
+   "post": {
+    "summary": "Link Apply",
+    "operationId": "link_apply_api_sessions__session_id__espn_link_apply_post",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LinkApplyRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SessionDetail"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sessions/{session_id}/espn/sync": {
+   "post": {
+    "summary": "Sync",
+    "operationId": "sync_api_sessions__session_id__espn_sync_post",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SyncRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SyncResult"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sessions/{session_id}/season/overview": {
+   "get": {
+    "summary": "Season Overview",
+    "operationId": "season_overview_api_sessions__session_id__season_overview_get",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     },
+     {
+      "name": "seed",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Seed"
+      }
+     },
+     {
+      "name": "period",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 22,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Period"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SeasonOverview"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sessions/{session_id}/season/matchup": {
+   "get": {
+    "summary": "Season Matchup",
+    "operationId": "season_matchup_api_sessions__session_id__season_matchup_get",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     },
+     {
+      "name": "period",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "maximum": 22,
+       "minimum": 1,
+       "title": "Period"
+      }
+     },
+     {
+      "name": "team_a",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "minLength": 1,
+       "title": "Team A"
+      }
+     },
+     {
+      "name": "team_b",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "minLength": 1,
+       "title": "Team B"
+      }
+     },
+     {
+      "name": "seed",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Seed"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MatchupResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sessions/{session_id}/season/free-agents": {
+   "get": {
+    "summary": "Season Free Agents",
+    "operationId": "season_free_agents_api_sessions__session_id__season_free_agents_get",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 500,
+       "minimum": 1,
+       "default": 50,
+       "title": "Limit"
+      }
+     },
+     {
+      "name": "position",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Position"
+      }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Q"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FreeAgentsResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sessions/{session_id}/season/results": {
+   "get": {
+    "summary": "Season Results",
+    "operationId": "season_results_api_sessions__session_id__season_results_get",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     },
+     {
+      "name": "period",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "maximum": 22,
+       "minimum": 1,
+       "title": "Period"
+      }
+     },
+     {
+      "name": "seed",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Seed"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WeekResultsResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
   }
  },
  "components": {
@@ -1686,6 +2141,34 @@
     ],
     "title": "DraftStateView"
    },
+   "EspnTeamView": {
+    "properties": {
+     "team_id": {
+      "type": "integer",
+      "title": "Team Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "owner_name": {
+      "type": "string",
+      "title": "Owner Name"
+     },
+     "n_players": {
+      "type": "integer",
+      "title": "N Players"
+     }
+    },
+    "type": "object",
+    "required": [
+     "team_id",
+     "name",
+     "owner_name",
+     "n_players"
+    ],
+    "title": "EspnTeamView"
+   },
    "EventRequest": {
     "properties": {
      "type": {
@@ -1836,6 +2319,116 @@
     },
     "type": "object",
     "title": "FastRecommendRequest"
+   },
+   "FreeAgentView": {
+    "properties": {
+     "player": {
+      "$ref": "#/components/schemas/PlayerView"
+     },
+     "score": {
+      "type": "number",
+      "title": "Score"
+     },
+     "z": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Z"
+     },
+     "best_drop": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/PlayerView"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "drop_value": {
+      "type": "number",
+      "title": "Drop Value"
+     },
+     "swap_delta": {
+      "type": "number",
+      "title": "Swap Delta"
+     },
+     "injury_status": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Injury Status"
+     },
+     "percent_owned": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Percent Owned"
+     },
+     "flags": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Flags"
+     }
+    },
+    "type": "object",
+    "required": [
+     "player",
+     "score",
+     "z",
+     "best_drop",
+     "drop_value",
+     "swap_delta",
+     "injury_status",
+     "percent_owned",
+     "flags"
+    ],
+    "title": "FreeAgentView"
+   },
+   "FreeAgentsResponse": {
+    "properties": {
+     "ids": {
+      "$ref": "#/components/schemas/ResponseIds"
+     },
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/FreeAgentView"
+      },
+      "type": "array",
+      "title": "Items"
+     },
+     "synced_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Synced At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "ids",
+     "items",
+     "synced_at"
+    ],
+    "title": "FreeAgentsResponse"
    },
    "HTTPValidationError": {
     "properties": {
@@ -2470,6 +3063,116 @@
     ],
     "title": "LineupMode"
    },
+   "LinkApplyRequest": {
+    "properties": {
+     "league_id": {
+      "type": "integer",
+      "exclusiveMinimum": 0.0,
+      "title": "League Id"
+     },
+     "mapping": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Mapping"
+     }
+    },
+    "type": "object",
+    "required": [
+     "league_id",
+     "mapping"
+    ],
+    "title": "LinkApplyRequest"
+   },
+   "LinkPreview": {
+    "properties": {
+     "league_id": {
+      "type": "integer",
+      "title": "League Id"
+     },
+     "league_name": {
+      "type": "string",
+      "title": "League Name"
+     },
+     "teams": {
+      "items": {
+       "$ref": "#/components/schemas/EspnTeamView"
+      },
+      "type": "array",
+      "title": "Teams"
+     },
+     "mapping": {
+      "items": {
+       "$ref": "#/components/schemas/TeamMatchView"
+      },
+      "type": "array",
+      "title": "Mapping"
+     },
+     "unmatched_managers": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Unmatched Managers"
+     },
+     "unmatched_teams": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Unmatched Teams"
+     },
+     "settings_warnings": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Settings Warnings"
+     },
+     "warnings": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Warnings"
+     }
+    },
+    "type": "object",
+    "required": [
+     "league_id",
+     "league_name",
+     "teams",
+     "mapping",
+     "unmatched_managers",
+     "unmatched_teams",
+     "settings_warnings",
+     "warnings"
+    ],
+    "title": "LinkPreview"
+   },
+   "LinkRequest": {
+    "properties": {
+     "league_id": {
+      "type": "integer",
+      "exclusiveMinimum": 0.0,
+      "title": "League Id"
+     },
+     "overrides": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Overrides",
+      "description": "manager id -> ESPN team id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "league_id"
+    ],
+    "title": "LinkRequest"
+   },
    "Manager": {
     "properties": {
      "id": {
@@ -2571,6 +3274,145 @@
      "categories_top3"
     ],
     "title": "ManagerProfile"
+   },
+   "MatchupOddsView": {
+    "properties": {
+     "period": {
+      "type": "integer",
+      "title": "Period"
+     },
+     "manager_a": {
+      "type": "string",
+      "title": "Manager A"
+     },
+     "manager_b": {
+      "type": "string",
+      "title": "Manager B"
+     },
+     "expected_a": {
+      "type": "number",
+      "title": "Expected A"
+     },
+     "expected_b": {
+      "type": "number",
+      "title": "Expected B"
+     },
+     "p_win_a": {
+      "type": "number",
+      "title": "P Win A"
+     },
+     "p_tie": {
+      "type": "number",
+      "title": "P Tie"
+     },
+     "p_win_b": {
+      "type": "number",
+      "title": "P Win B"
+     },
+     "cat_p_a": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Cat P A"
+     },
+     "modal_score": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "title": "Modal Score"
+     },
+     "games_a": {
+      "type": "integer",
+      "title": "Games A"
+     },
+     "games_b": {
+      "type": "integer",
+      "title": "Games B"
+     },
+     "notes": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Notes"
+     }
+    },
+    "type": "object",
+    "required": [
+     "period",
+     "manager_a",
+     "manager_b",
+     "expected_a",
+     "expected_b",
+     "p_win_a",
+     "p_tie",
+     "p_win_b",
+     "cat_p_a",
+     "modal_score",
+     "games_a",
+     "games_b",
+     "notes"
+    ],
+    "title": "MatchupOddsView"
+   },
+   "MatchupPairView": {
+    "properties": {
+     "period": {
+      "type": "integer",
+      "title": "Period"
+     },
+     "home_manager_id": {
+      "type": "string",
+      "title": "Home Manager Id"
+     },
+     "away_manager_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Away Manager Id"
+     },
+     "odds": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/MatchupOddsView"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "type": "object",
+    "required": [
+     "period",
+     "home_manager_id",
+     "away_manager_id",
+     "odds"
+    ],
+    "title": "MatchupPairView"
+   },
+   "MatchupResponse": {
+    "properties": {
+     "ids": {
+      "$ref": "#/components/schemas/ResponseIds"
+     },
+     "odds": {
+      "$ref": "#/components/schemas/MatchupOddsView"
+     }
+    },
+    "type": "object",
+    "required": [
+     "ids",
+     "odds"
+    ],
+    "title": "MatchupResponse"
    },
    "PickRecordView": {
     "properties": {
@@ -3323,6 +4165,48 @@
     ],
     "title": "RiskPreference"
    },
+   "RosterDiffView": {
+    "properties": {
+     "manager_id": {
+      "type": "string",
+      "title": "Manager Id"
+     },
+     "team_id": {
+      "type": "integer",
+      "title": "Team Id"
+     },
+     "added": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Added"
+     },
+     "dropped": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Dropped"
+     },
+     "source_refs": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Source Refs"
+     }
+    },
+    "type": "object",
+    "required": [
+     "manager_id",
+     "team_id",
+     "added",
+     "dropped",
+     "source_refs"
+    ],
+    "title": "RosterDiffView"
+   },
    "RosterSlotView": {
     "properties": {
      "slot": {
@@ -3438,6 +4322,123 @@
      "roto"
     ],
     "title": "ScoringFormat"
+   },
+   "SeasonOverview": {
+    "properties": {
+     "ids": {
+      "$ref": "#/components/schemas/ResponseIds"
+     },
+     "linked": {
+      "type": "boolean",
+      "title": "Linked"
+     },
+     "league_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "League Name"
+     },
+     "synced_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Synced At"
+     },
+     "summary": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Summary"
+     },
+     "warnings": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Warnings"
+     },
+     "current_period": {
+      "type": "integer",
+      "title": "Current Period"
+     },
+     "league_categories": {
+      "items": {
+       "$ref": "#/components/schemas/CategoryDef"
+      },
+      "type": "array",
+      "title": "League Categories"
+     },
+     "manager_names": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "type": "object",
+      "title": "Manager Names"
+     },
+     "power": {
+      "items": {
+       "$ref": "#/components/schemas/TeamPowerView"
+      },
+      "type": "array",
+      "title": "Power"
+     },
+     "movement": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Movement"
+     },
+     "matchups": {
+      "items": {
+       "$ref": "#/components/schemas/MatchupPairView"
+      },
+      "type": "array",
+      "title": "Matchups"
+     },
+     "user_matchup": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/MatchupPairView"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "type": "object",
+    "required": [
+     "ids",
+     "linked",
+     "league_name",
+     "synced_at",
+     "summary",
+     "warnings",
+     "current_period",
+     "league_categories",
+     "manager_names",
+     "power",
+     "movement",
+     "matchups",
+     "user_matchup"
+    ],
+    "title": "SeasonOverview"
    },
    "SessionCreate": {
     "properties": {
@@ -3727,6 +4728,175 @@
     "type": "object",
     "title": "Strategy"
    },
+   "SyncRequest": {
+    "properties": {
+     "expected_revision": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expected Revision"
+     }
+    },
+    "type": "object",
+    "title": "SyncRequest"
+   },
+   "SyncResult": {
+    "properties": {
+     "ids": {
+      "$ref": "#/components/schemas/ResponseIds"
+     },
+     "fetched_at": {
+      "type": "string",
+      "title": "Fetched At"
+     },
+     "summary": {
+      "type": "string",
+      "title": "Summary"
+     },
+     "changes": {
+      "items": {
+       "$ref": "#/components/schemas/RosterDiffView"
+      },
+      "type": "array",
+      "title": "Changes"
+     },
+     "warnings": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Warnings"
+     },
+     "unknown_players": {
+      "items": {
+       "$ref": "#/components/schemas/UnknownPlayerView"
+      },
+      "type": "array",
+      "title": "Unknown Players"
+     },
+     "state": {
+      "$ref": "#/components/schemas/DraftStateView"
+     }
+    },
+    "type": "object",
+    "required": [
+     "ids",
+     "fetched_at",
+     "summary",
+     "changes",
+     "warnings",
+     "unknown_players",
+     "state"
+    ],
+    "title": "SyncResult"
+   },
+   "TeamMatchView": {
+    "properties": {
+     "manager_id": {
+      "type": "string",
+      "title": "Manager Id"
+     },
+     "manager_name": {
+      "type": "string",
+      "title": "Manager Name"
+     },
+     "team_id": {
+      "type": "integer",
+      "title": "Team Id"
+     },
+     "team_name": {
+      "type": "string",
+      "title": "Team Name"
+     },
+     "owner_name": {
+      "type": "string",
+      "title": "Owner Name"
+     },
+     "overlap": {
+      "type": "number",
+      "title": "Overlap"
+     },
+     "confidence": {
+      "type": "string",
+      "title": "Confidence"
+     }
+    },
+    "type": "object",
+    "required": [
+     "manager_id",
+     "manager_name",
+     "team_id",
+     "team_name",
+     "owner_name",
+     "overlap",
+     "confidence"
+    ],
+    "title": "TeamMatchView"
+   },
+   "TeamPowerView": {
+    "properties": {
+     "manager_id": {
+      "type": "string",
+      "title": "Manager Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "is_user": {
+      "type": "boolean",
+      "title": "Is User"
+     },
+     "expected_cats": {
+      "type": "number",
+      "title": "Expected Cats"
+     },
+     "rank": {
+      "type": "integer",
+      "title": "Rank"
+     },
+     "cat_win_prob": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Cat Win Prob"
+     },
+     "z": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Z"
+     },
+     "n_players": {
+      "type": "integer",
+      "title": "N Players"
+     },
+     "n_ir": {
+      "type": "integer",
+      "title": "N Ir"
+     }
+    },
+    "type": "object",
+    "required": [
+     "manager_id",
+     "name",
+     "is_user",
+     "expected_cats",
+     "rank",
+     "cat_win_prob",
+     "z",
+     "n_players",
+     "n_ir"
+    ],
+    "title": "TeamPowerView"
+   },
    "TieRule": {
     "properties": {
      "each_category_tie_value": {
@@ -3785,6 +4955,24 @@
     ],
     "title": "TradedPick"
    },
+   "UnknownPlayerView": {
+    "properties": {
+     "espn_id": {
+      "type": "integer",
+      "title": "Espn Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     }
+    },
+    "type": "object",
+    "required": [
+     "espn_id",
+     "name"
+    ],
+    "title": "UnknownPlayerView"
+   },
    "ValidationError": {
     "properties": {
      "loc": {
@@ -3824,6 +5012,120 @@
      "type"
     ],
     "title": "ValidationError"
+   },
+   "WeekResultView": {
+    "properties": {
+     "period": {
+      "type": "integer",
+      "title": "Period"
+     },
+     "home": {
+      "$ref": "#/components/schemas/WeekSideView"
+     },
+     "away": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/WeekSideView"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "winner": {
+      "type": "string",
+      "title": "Winner"
+     }
+    },
+    "type": "object",
+    "required": [
+     "period",
+     "home",
+     "away",
+     "winner"
+    ],
+    "title": "WeekResultView"
+   },
+   "WeekResultsResponse": {
+    "properties": {
+     "ids": {
+      "$ref": "#/components/schemas/ResponseIds"
+     },
+     "period": {
+      "type": "integer",
+      "title": "Period"
+     },
+     "results": {
+      "items": {
+       "$ref": "#/components/schemas/WeekResultView"
+      },
+      "type": "array",
+      "title": "Results"
+     },
+     "projected": {
+      "items": {
+       "$ref": "#/components/schemas/MatchupPairView"
+      },
+      "type": "array",
+      "title": "Projected"
+     }
+    },
+    "type": "object",
+    "required": [
+     "ids",
+     "period",
+     "results",
+     "projected"
+    ],
+    "title": "WeekResultsResponse"
+   },
+   "WeekSideView": {
+    "properties": {
+     "manager_id": {
+      "type": "string",
+      "title": "Manager Id"
+     },
+     "values": {
+      "additionalProperties": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "type": "object",
+      "title": "Values"
+     },
+     "results": {
+      "additionalProperties": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "type": "object",
+      "title": "Results"
+     },
+     "cats_won": {
+      "type": "number",
+      "title": "Cats Won"
+     }
+    },
+    "type": "object",
+    "required": [
+     "manager_id",
+     "values",
+     "results",
+     "cats_won"
+    ],
+    "title": "WeekSideView"
    }
   }
  }

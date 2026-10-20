@@ -333,6 +333,125 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sessions/{session_id}/espn/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Link Preview */
+        post: operations["link_preview_api_sessions__session_id__espn_link_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}/espn/link/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Link Apply */
+        post: operations["link_apply_api_sessions__session_id__espn_link_apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}/espn/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync */
+        post: operations["sync_api_sessions__session_id__espn_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}/season/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Season Overview */
+        get: operations["season_overview_api_sessions__session_id__season_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}/season/matchup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Season Matchup */
+        get: operations["season_matchup_api_sessions__session_id__season_matchup_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}/season/free-agents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Season Free Agents */
+        get: operations["season_free_agents_api_sessions__session_id__season_free_agents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}/season/results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Season Results */
+        get: operations["season_results_api_sessions__session_id__season_results_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -565,6 +684,17 @@ export interface components {
             strategy: components["schemas"]["Strategy"];
             league: components["schemas"]["LeagueConfig"];
         };
+        /** EspnTeamView */
+        EspnTeamView: {
+            /** Team Id */
+            team_id: number;
+            /** Name */
+            name: string;
+            /** Owner Name */
+            owner_name: string;
+            /** N Players */
+            n_players: number;
+        };
         /** EventRequest */
         EventRequest: {
             type: components["schemas"]["EventType"];
@@ -624,6 +754,35 @@ export interface components {
              * @default 8
              */
             include_deltas: number;
+        };
+        /** FreeAgentView */
+        FreeAgentView: {
+            player: components["schemas"]["PlayerView"];
+            /** Score */
+            score: number;
+            /** Z */
+            z: {
+                [key: string]: number;
+            };
+            best_drop: components["schemas"]["PlayerView"] | null;
+            /** Drop Value */
+            drop_value: number;
+            /** Swap Delta */
+            swap_delta: number;
+            /** Injury Status */
+            injury_status: string | null;
+            /** Percent Owned */
+            percent_owned: number | null;
+            /** Flags */
+            flags: string[];
+        };
+        /** FreeAgentsResponse */
+        FreeAgentsResponse: {
+            ids: components["schemas"]["ResponseIds"];
+            /** Items */
+            items: components["schemas"]["FreeAgentView"][];
+            /** Synced At */
+            synced_at: string | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -885,6 +1044,46 @@ export interface components {
          * @enum {string}
          */
         LineupMode: "weekly" | "daily";
+        /** LinkApplyRequest */
+        LinkApplyRequest: {
+            /** League Id */
+            league_id: number;
+            /** Mapping */
+            mapping: {
+                [key: string]: number;
+            };
+        };
+        /** LinkPreview */
+        LinkPreview: {
+            /** League Id */
+            league_id: number;
+            /** League Name */
+            league_name: string;
+            /** Teams */
+            teams: components["schemas"]["EspnTeamView"][];
+            /** Mapping */
+            mapping: components["schemas"]["TeamMatchView"][];
+            /** Unmatched Managers */
+            unmatched_managers: string[];
+            /** Unmatched Teams */
+            unmatched_teams: number[];
+            /** Settings Warnings */
+            settings_warnings: string[];
+            /** Warnings */
+            warnings: string[];
+        };
+        /** LinkRequest */
+        LinkRequest: {
+            /** League Id */
+            league_id: number;
+            /**
+             * Overrides
+             * @description manager id -> ESPN team id
+             */
+            overrides?: {
+                [key: string]: number;
+            };
+        };
         /** Manager */
         Manager: {
             /** Id */
@@ -925,6 +1124,52 @@ export interface components {
             };
             /** Categories Top3 */
             categories_top3: number;
+        };
+        /** MatchupOddsView */
+        MatchupOddsView: {
+            /** Period */
+            period: number;
+            /** Manager A */
+            manager_a: string;
+            /** Manager B */
+            manager_b: string;
+            /** Expected A */
+            expected_a: number;
+            /** Expected B */
+            expected_b: number;
+            /** P Win A */
+            p_win_a: number;
+            /** P Tie */
+            p_tie: number;
+            /** P Win B */
+            p_win_b: number;
+            /** Cat P A */
+            cat_p_a: {
+                [key: string]: number;
+            };
+            /** Modal Score */
+            modal_score: number[];
+            /** Games A */
+            games_a: number;
+            /** Games B */
+            games_b: number;
+            /** Notes */
+            notes: string[];
+        };
+        /** MatchupPairView */
+        MatchupPairView: {
+            /** Period */
+            period: number;
+            /** Home Manager Id */
+            home_manager_id: string;
+            /** Away Manager Id */
+            away_manager_id: string | null;
+            odds: components["schemas"]["MatchupOddsView"] | null;
+        };
+        /** MatchupResponse */
+        MatchupResponse: {
+            ids: components["schemas"]["ResponseIds"];
+            odds: components["schemas"]["MatchupOddsView"];
         };
         /** PickRecordView */
         PickRecordView: {
@@ -1170,6 +1415,19 @@ export interface components {
          * @enum {string}
          */
         RiskPreference: "conservative" | "neutral" | "aggressive";
+        /** RosterDiffView */
+        RosterDiffView: {
+            /** Manager Id */
+            manager_id: string;
+            /** Team Id */
+            team_id: number;
+            /** Added */
+            added: string[];
+            /** Dropped */
+            dropped: string[];
+            /** Source Refs */
+            source_refs: string[];
+        };
         /** RosterSlotView */
         RosterSlotView: {
             /** Slot */
@@ -1209,6 +1467,37 @@ export interface components {
          * @enum {string}
          */
         ScoringFormat: "h2h_each_category" | "h2h_most_categories" | "roto";
+        /** SeasonOverview */
+        SeasonOverview: {
+            ids: components["schemas"]["ResponseIds"];
+            /** Linked */
+            linked: boolean;
+            /** League Name */
+            league_name: string | null;
+            /** Synced At */
+            synced_at: string | null;
+            /** Summary */
+            summary: string | null;
+            /** Warnings */
+            warnings: string[];
+            /** Current Period */
+            current_period: number;
+            /** League Categories */
+            league_categories: components["schemas"]["CategoryDef"][];
+            /** Manager Names */
+            manager_names: {
+                [key: string]: string;
+            };
+            /** Power */
+            power: components["schemas"]["TeamPowerView"][];
+            /** Movement */
+            movement: {
+                [key: string]: number;
+            };
+            /** Matchups */
+            matchups: components["schemas"]["MatchupPairView"][];
+            user_matchup: components["schemas"]["MatchupPairView"] | null;
+        };
         /** SessionCreate */
         SessionCreate: {
             league: components["schemas"]["LeagueConfig"];
@@ -1328,6 +1617,68 @@ export interface components {
              */
             roster_scale: number;
         };
+        /** SyncRequest */
+        SyncRequest: {
+            /** Expected Revision */
+            expected_revision?: number | null;
+        };
+        /** SyncResult */
+        SyncResult: {
+            ids: components["schemas"]["ResponseIds"];
+            /** Fetched At */
+            fetched_at: string;
+            /** Summary */
+            summary: string;
+            /** Changes */
+            changes: components["schemas"]["RosterDiffView"][];
+            /** Warnings */
+            warnings: string[];
+            /** Unknown Players */
+            unknown_players: components["schemas"]["UnknownPlayerView"][];
+            state: components["schemas"]["DraftStateView"];
+        };
+        /** TeamMatchView */
+        TeamMatchView: {
+            /** Manager Id */
+            manager_id: string;
+            /** Manager Name */
+            manager_name: string;
+            /** Team Id */
+            team_id: number;
+            /** Team Name */
+            team_name: string;
+            /** Owner Name */
+            owner_name: string;
+            /** Overlap */
+            overlap: number;
+            /** Confidence */
+            confidence: string;
+        };
+        /** TeamPowerView */
+        TeamPowerView: {
+            /** Manager Id */
+            manager_id: string;
+            /** Name */
+            name: string;
+            /** Is User */
+            is_user: boolean;
+            /** Expected Cats */
+            expected_cats: number;
+            /** Rank */
+            rank: number;
+            /** Cat Win Prob */
+            cat_win_prob: {
+                [key: string]: number;
+            };
+            /** Z */
+            z: {
+                [key: string]: number;
+            };
+            /** N Players */
+            n_players: number;
+            /** N Ir */
+            n_ir: number;
+        };
         /**
          * TieRule
          * @description How a tied category is scored.
@@ -1365,6 +1716,13 @@ export interface components {
             /** To Manager Id */
             to_manager_id: string;
         };
+        /** UnknownPlayerView */
+        UnknownPlayerView: {
+            /** Espn Id */
+            espn_id: number;
+            /** Name */
+            name: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -1377,6 +1735,40 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** WeekResultView */
+        WeekResultView: {
+            /** Period */
+            period: number;
+            home: components["schemas"]["WeekSideView"];
+            away: components["schemas"]["WeekSideView"] | null;
+            /** Winner */
+            winner: string;
+        };
+        /** WeekResultsResponse */
+        WeekResultsResponse: {
+            ids: components["schemas"]["ResponseIds"];
+            /** Period */
+            period: number;
+            /** Results */
+            results: components["schemas"]["WeekResultView"][];
+            /** Projected */
+            projected: components["schemas"]["MatchupPairView"][];
+        };
+        /** WeekSideView */
+        WeekSideView: {
+            /** Manager Id */
+            manager_id: string;
+            /** Values */
+            values: {
+                [key: string]: number | null;
+            };
+            /** Results */
+            results: {
+                [key: string]: string | null;
+            };
+            /** Cats Won */
+            cats_won: number;
         };
     };
     responses: never;
@@ -2067,6 +2459,250 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    link_preview_api_sessions__session_id__espn_link_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkPreview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    link_apply_api_sessions__session_id__espn_link_apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkApplyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_api_sessions__session_id__espn_sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyncRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    season_overview_api_sessions__session_id__season_overview_get: {
+        parameters: {
+            query?: {
+                seed?: number | null;
+                period?: number | null;
+            };
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeasonOverview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    season_matchup_api_sessions__session_id__season_matchup_get: {
+        parameters: {
+            query: {
+                period: number;
+                team_a: string;
+                team_b: string;
+                seed?: number | null;
+            };
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchupResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    season_free_agents_api_sessions__session_id__season_free_agents_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                position?: string | null;
+                q?: string | null;
+            };
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FreeAgentsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    season_results_api_sessions__session_id__season_results_get: {
+        parameters: {
+            query: {
+                period: number;
+                seed?: number | null;
+            };
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeekResultsResponse"];
                 };
             };
             /** @description Validation Error */

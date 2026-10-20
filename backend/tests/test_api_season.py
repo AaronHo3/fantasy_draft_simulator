@@ -123,6 +123,107 @@ def league_from_state(
     return make_league(teams, fetched_at, transactions=transactions, matchups=matchups)
 
 
+def raw_from_league(league: EspnLeague) -> dict:
+    """ESPN-shaped JSON for the fake league so the cached payload re-parses after a restart."""
+    s = league.settings
+    return {
+        "id": league.league_id,
+        "seasonId": league.season_id,
+        "scoringPeriodId": s.scoring_period_id,
+        "status": {"currentMatchupPeriod": s.current_matchup_period},
+        "settings": {
+            "name": s.name,
+            "scoringSettings": {"scoringType": s.scoring_type, "scoringItems": [{"statId": i} for i in s.stat_ids]},
+            "rosterSettings": {
+                "lineupSlotCounts": {str(k): v for k, v in s.lineup_slot_counts.items()},
+                "positionLimits": {str(k): v for k, v in s.position_limits.items()},
+                "lineupLocktimeType": s.lineup_lock_type,
+            },
+            "scheduleSettings": {
+                "matchupPeriodCount": s.matchup_period_count,
+                "playoffTeamCount": s.playoff_team_count,
+            },
+        },
+        "members": [
+            {"id": t.owner_ids[0], "firstName": t.owner_name.split()[0], "lastName": " ".join(t.owner_name.split()[1:])}
+            for t in league.teams
+        ],
+        "teams": [
+            {
+                "id": t.team_id,
+                "abbrev": t.abbrev,
+                "name": t.name,
+                "owners": list(t.owner_ids),
+                "primaryOwner": t.owner_ids[0],
+                "record": {"overall": {"wins": t.wins, "losses": t.losses, "ties": t.ties}},
+                "roster": {
+                    "entries": [
+                        {
+                            "playerId": e.espn_player_id,
+                            "lineupSlotId": e.lineup_slot_id,
+                            "injuryStatus": e.injury_status,
+                            "acquisitionType": e.acquisition_type,
+                            "playerPoolEntry": {"player": {"id": e.espn_player_id, "fullName": e.name}},
+                        }
+                        for e in t.roster
+                    ]
+                },
+            }
+            for t in league.teams
+        ],
+        "schedule": [
+            {
+                "id": m.matchup_id,
+                "matchupPeriodId": m.period,
+                "winner": m.winner,
+                "home": {
+                    "teamId": m.home.team_id,
+                    "cumulativeScore": {
+                        "scoreByStat": {
+                            str(k): {"score": v.score, "result": v.result} for k, v in m.home.by_stat.items()
+                        }
+                    },
+                },
+                **(
+                    {
+                        "away": {
+                            "teamId": m.away.team_id,
+                            "cumulativeScore": {
+                                "scoreByStat": {
+                                    str(k): {"score": v.score, "result": v.result} for k, v in m.away.by_stat.items()
+                                }
+                            },
+                        }
+                    }
+                    if m.away
+                    else {}
+                ),
+            }
+            for m in league.matchups
+        ],
+        "transactions": [
+            {
+                "id": tx.transaction_id,
+                "type": tx.kind,
+                "status": tx.status,
+                "teamId": tx.team_id,
+                "proposedDate": 1792286818992,
+                "scoringPeriodId": tx.scoring_period_id,
+                "items": [
+                    {
+                        "type": it.kind,
+                        "playerId": it.espn_player_id,
+                        "fromTeamId": it.from_team_id,
+                        "toTeamId": it.to_team_id,
+                    }
+                    for it in tx.items
+                ],
+            }
+            for tx in league.transactions
+        ],
+    }
+
+
 def install_fakes(client, league: EspnLeague | Exception, players: pd.DataFrame | Exception | None = None):
     ctx = client.app.state.ctx
     calls = {"league": 0, "players": 0}
@@ -132,7 +233,7 @@ def install_fakes(client, league: EspnLeague | Exception, players: pd.DataFrame 
         if isinstance(league, Exception):
             raise league
         assert league_id == LEAGUE_ID and season_id == 2027
-        return league, {"id": league_id}
+        return league, raw_from_league(league)
 
     def fake_players(season_id: int) -> pd.DataFrame:
         calls["players"] += 1
@@ -294,3 +395,208 @@ def test_sync_players_feed_failure_is_a_warning(client, complete_session):
     )
     r = client.post(f"/api/sessions/{sid}/espn/sync", json={})
     assert r.status_code == 200 and any("player status" in w for w in r.json()["warnings"])
+
+
+# --- season read endpoints ----------------------------------------------------------------------
+
+
+def stats(pts, reb, fgm, fga, ftm, fta, res_pts, res_reb):
+    return {
+        0: (pts, res_pts),
+        6: (reb, res_reb),
+        13: (fgm, None),
+        14: (fga, None),
+        15: (ftm, None),
+        16: (fta, None),
+        3: (40, "TIE"),
+        2: (8, "TIE"),
+        1: (4, "TIE"),
+        17: (15, "TIE"),
+        11: (20, "TIE"),
+        19: (fgm / fga, "WIN"),
+        20: (ftm / fta, "LOSS"),
+    }
+
+
+def week1(user_home=True):
+    """Period 1: team 1 (user) vs team 2, team 3 on a bye."""
+    a, b = (1, 2) if user_home else (2, 1)
+    return (
+        pair(
+            1,
+            1,
+            a,
+            b,
+            stats(400, 150, 150, 300, 80, 100, "WIN", "LOSS"),
+            stats(380, 160, 140, 300, 90, 100, "LOSS", "WIN"),
+        ),
+        pair(2, 1, 3, None),
+        pair(3, 2, 2, 3),
+        pair(4, 2, 1, None),
+    )
+
+
+def linked_and_synced(client, sid, matchups):
+    install_fakes(client, league_from_state(client, sid, matchups=matchups))
+    link(client, sid)
+    r = client.post(f"/api/sessions/{sid}/espn/sync", json={})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def test_overview_unlinked_still_returns_power(client, complete_session):
+    r = client.get(f"/api/sessions/{complete_session}/season/overview")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["linked"] is False and body["matchups"] == [] and body["user_matchup"] is None
+    assert [p["rank"] for p in body["power"]] == [1, 2, 3]
+    assert body["ids"]["snapshot_id"] and body["synced_at"] is None
+
+
+def test_overview_linked_has_matchups_and_user_matchup(client, complete_session):
+    sid = complete_session
+    linked_and_synced(client, sid, week1())
+    r = client.get(f"/api/sessions/{sid}/season/overview")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert (
+        body["linked"] is True
+        and body["league_name"] == "Fake League"
+        and body["synced_at"] == "2026-10-19T04:00:00+00:00"
+    )
+    assert body["current_period"] == 1
+    assert len(body["matchups"]) == 2
+    um = body["user_matchup"]
+    assert um["home_manager_id"] == "m01" and um["away_manager_id"] == "m02"
+    odds = um["odds"]
+    assert abs(odds["p_win_a"] + odds["p_tie"] + odds["p_win_b"] - 1) < 1e-9
+    assert set(odds["cat_p_a"]) == {c["key"] for c in body["league_categories"]}
+    bye = next(m for m in body["matchups"] if m["away_manager_id"] is None)
+    assert bye["home_manager_id"] == "m03" and bye["odds"] is None
+    assert body["movement"] == {}  # first sync: nothing to compare with
+    assert body["power"][0]["rank"] == 1 and len(body["power"]) == 3
+    # a period selector re-pairs from ESPN's schedule
+    r2 = client.get(f"/api/sessions/{sid}/season/overview", params={"period": 2})
+    um2 = r2.json()["user_matchup"]
+    assert um2["home_manager_id"] == "m01" and um2["away_manager_id"] is None
+
+
+def test_overview_user_bye(client, complete_session):
+    sid = complete_session
+    linked_and_synced(client, sid, (pair(1, 1, 2, 3), pair(2, 1, 1, None)))
+    body = client.get(f"/api/sessions/{sid}/season/overview").json()
+    assert body["user_matchup"]["away_manager_id"] is None and body["user_matchup"]["odds"] is None
+    other = next(m for m in body["matchups"] if m["away_manager_id"] is not None)
+    assert other["odds"]["manager_a"] == "m02" and other["odds"]["manager_b"] == "m03"
+
+
+def test_overview_movement_after_second_sync(client, complete_session):
+    sid = complete_session
+    linked_and_synced(client, sid, week1())
+    st = client.get(f"/api/sessions/{sid}/state").json()
+    weakest = client.get(f"/api/sessions/{sid}/season/overview").json()["power"][-1]["manager_id"]
+    # the weakest team adds the best free agent and drops its worst player
+    fa = client.get(f"/api/sessions/{sid}/season/free-agents", params={"limit": 1}).json()["items"][0]["player"][
+        "player_id"
+    ]
+    drop = st["current_rosters"][weakest][-1]
+    install_fakes(
+        client,
+        league_from_state(
+            client,
+            sid,
+            fetched_at="2026-10-20T04:00:00+00:00",
+            add=(weakest, fa),
+            drop=(weakest, drop),
+            matchups=week1(),
+        ),
+    )
+    assert client.post(f"/api/sessions/{sid}/espn/sync", json={}).status_code == 200
+    body = client.get(f"/api/sessions/{sid}/season/overview").json()
+    assert set(body["movement"]) == {"m01", "m02", "m03"}
+    assert sum(body["movement"].values()) == 0
+
+
+def test_matchup_endpoint(client, complete_session):
+    sid = complete_session
+    linked_and_synced(client, sid, week1())
+    r = client.get(f"/api/sessions/{sid}/season/matchup", params={"period": 1, "team_a": "m02", "team_b": "m03"})
+    assert r.status_code == 200, r.text
+    assert r.json()["odds"]["manager_a"] == "m02" and r.json()["ids"]["draft_revision"] > 0
+    assert (
+        client.get(
+            f"/api/sessions/{sid}/season/matchup", params={"period": 1, "team_a": "m02", "team_b": "zz"}
+        ).status_code
+        == 422
+    )
+
+
+def test_free_agents_endpoint_excludes_owned(client, complete_session):
+    sid = complete_session
+    linked_and_synced(client, sid, week1())
+    st = client.get(f"/api/sessions/{sid}/state").json()
+    r = client.get(f"/api/sessions/{sid}/season/free-agents", params={"limit": 15})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert len(body["items"]) == 15 and body["synced_at"] == "2026-10-19T04:00:00+00:00"
+    ids = {it["player"]["player_id"] for it in body["items"]}
+    assert not ids & set(st["owned_player_ids"])
+    first = body["items"][0]
+    assert first["best_drop"]["player_id"] in st["current_rosters"]["m01"]
+    assert (
+        first["player"]["name"]
+        and "z" in first
+        and first["swap_delta"] == pytest.approx(first["score"] - first["drop_value"], abs=1e-6)
+    )
+    q = client.get(f"/api/sessions/{sid}/season/free-agents", params={"q": first["player"]["name"].split()[-1]}).json()
+    assert any(it["player"]["player_id"] == first["player"]["player_id"] for it in q["items"])
+
+
+def test_results_endpoint_from_cached_payload(client, complete_session):
+    sid = complete_session
+    linked_and_synced(client, sid, week1())
+    r = client.get(f"/api/sessions/{sid}/season/results", params={"period": 1})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["period"] == 1 and len(body["results"]) == 2
+    game = next(x for x in body["results"] if x["away"] is not None)
+    assert (
+        game["home"]["manager_id"] == "m01"
+        and game["home"]["values"]["PTS"] == 400
+        and game["home"]["results"]["PTS"] == "WIN"
+    )
+    assert game["home"]["values"]["FG_PCT"] == pytest.approx(0.5)
+    assert game["home"]["cats_won"] == game["away"]["cats_won"]
+    assert len(body["projected"]) == 2 and body["projected"][0]["period"] == 1
+    # the parsed league survives a process restart through the cached raw payload
+    ctx = client.app.state.ctx
+    ctx.leagues.clear()
+    assert client.get(f"/api/sessions/{sid}/season/results", params={"period": 1}).status_code == 200
+
+
+def test_results_unlinked_409(client, complete_session):
+    r = client.get(f"/api/sessions/{complete_session}/season/results", params={"period": 1})
+    assert r.status_code == 409 and r.json()["code"] == "not_linked"
+
+
+# --- CLI ------------------------------------------------------------------------------------------
+
+
+def test_cli_link_and_sync(client, complete_session, monkeypatch, capsys):
+    from app import cli
+
+    sid = complete_session
+    install_fakes(client, league_from_state(client, sid, matchups=week1()))
+    ctx = client.app.state.ctx
+    monkeypatch.setattr(cli, "build_context", lambda _settings: ctx)
+    assert cli.main(["espn-link", sid, str(LEAGUE_ID)]) == 0
+    out = capsys.readouterr().out
+    assert "m01" in out and "Team 1" in out and "preview only" in out
+    assert client.get(f"/api/sessions/{sid}/state").json()["league"]["espn_league_id"] is None
+    assert cli.main(["espn-link", sid, str(LEAGUE_ID), "--apply", "--map", "m01=1"]) == 0
+    assert client.get(f"/api/sessions/{sid}/state").json()["league"]["espn_league_id"] == LEAGUE_ID
+    assert cli.main(["espn-sync", sid]) == 0
+    assert "ESPN sync:" in capsys.readouterr().out
+    assert cli.main(["season", sid]) == 0
+    out = capsys.readouterr().out
+    assert "period 1" in out and "m01" in out or "Team 1" in out

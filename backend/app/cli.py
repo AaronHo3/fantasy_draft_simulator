@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from app.api.deps import build_context
 from app.settings import settings
 
 
@@ -114,7 +115,17 @@ def cmd_research(_: argparse.Namespace) -> int:
     from app.projections.research import evaluate, write_report
 
     df = evaluate(settings.data_dir)
-    cols = ["target", "variant", "spearman_value", "top150_overlap", "top50_overlap", "value_mae", "mae_MIN", "mae_GP", "mae_PTS"]
+    cols = [
+        "target",
+        "variant",
+        "spearman_value",
+        "top150_overlap",
+        "top50_overlap",
+        "value_mae",
+        "mae_MIN",
+        "mae_GP",
+        "mae_PTS",
+    ]
     print(df[cols].sort_values(["target", "spearman_value"], ascending=[True, False]).to_string(index=False))
     print("wrote", write_report(df))
     return 0
@@ -124,9 +135,17 @@ def cmd_evaluate(ns: argparse.Namespace) -> int:
     from app.eval.mock_draft import run_experiment, summarize, write_report
 
     strategies = ns.strategies or ["adp_bot", "naive_last_season", "static_value", "static_need", "fast", "refined"]
-    exp = run_experiment(settings.data_dir, seats=ns.seats, seeds=list(range(ns.seeds)), strategies=strategies,
-                         refined_seats=ns.refined_seats or None, budget_ms=ns.budget_ms, refined_seeds=ns.refined_seeds,
-                         user_model=ns.user_model, target=ns.target)
+    exp = run_experiment(
+        settings.data_dir,
+        seats=ns.seats,
+        seeds=list(range(ns.seeds)),
+        strategies=strategies,
+        refined_seats=ns.refined_seats or None,
+        budget_ms=ns.budget_ms,
+        refined_seeds=ns.refined_seeds,
+        user_model=ns.user_model,
+        target=ns.target,
+    )
     summary = summarize(exp)
     path = write_report(exp, summary, Path(ns.out) if ns.out else None)
     print(json.dumps(summary, indent=1))
@@ -135,20 +154,23 @@ def cmd_evaluate(ns: argparse.Namespace) -> int:
 
 
 def cmd_season(ns: argparse.Namespace) -> int:
-    """Actual weekly category standings for a session from live NBA game logs."""
-    from app.persistence.store import SessionStore
-    from app.projections.registry import SnapshotRegistry
+    """Weekly standings: from ESPN when the session is linked, else from live NBA game logs."""
     from app.season.tracker import fetch_logs, standings_table, weekly_lines
 
-    store = SessionStore(settings.sessions_db)
-    state = store.state(ns.session_id)
-    meta = store.session_meta(ns.session_id)
-    store.close()
-    reg = SnapshotRegistry(settings.demo_dir, settings.snapshots_dir)
-    reg.load_all()
+    ctx = build_context(settings)
+    state = ctx.store.state(ns.session_id)
+    meta = ctx.store.session_meta(ns.session_id)
+    if state.league.espn_league_id is not None and not ns.nba_logs:
+        return _print_espn_week(ctx, ns.session_id, int(ns.week) if ns.week and ns.week.isdigit() else None)
+    reg = ctx.registry
     snap = reg.get(meta["snapshot_id"]) if meta and reg.has(meta["snapshot_id"]) else reg.get(reg.default_id())
     logs = fetch_logs(state.league.season, ns.season_type)
-    nba_ids = {p.nba_id: r.manager_id for r in state.picks.values() for p in [snap.players[snap.index[r.player_id]]] if p.nba_id}
+    nba_ids = {
+        p.nba_id: r.manager_id
+        for r in state.picks.values()
+        for p in [snap.players[snap.index[r.player_id]]]
+        if p.nba_id
+    }
     lines = weekly_lines(logs, nba_ids)
     if lines.empty:
         print(f"No {ns.season_type} games yet for {state.league.season}.")
@@ -162,8 +184,92 @@ def cmd_season(ns: argparse.Namespace) -> int:
         with pd.ExcelWriter(ns.out, engine="openpyxl") as w:
             df.to_excel(w, sheet_name=f"week {week}", index=False)
             grid.to_excel(w, sheet_name="head-to-head")
-            lines[lines["week"] == week].merge(pd.DataFrame({"nba_id": list(nba_ids), "team": [state.league.manager(m).name for m in nba_ids.values()]}), on="nba_id").to_excel(w, sheet_name="player lines", index=False)
+            lines[lines["week"] == week].merge(
+                pd.DataFrame(
+                    {"nba_id": list(nba_ids), "team": [state.league.manager(m).name for m in nba_ids.values()]}
+                ),
+                on="nba_id",
+            ).to_excel(w, sheet_name="player lines", index=False)
         print("wrote", ns.out)
+    return 0
+
+
+def cmd_espn_link(ns: argparse.Namespace) -> int:
+    """Preview (and with --apply, store) the mapping between session managers and ESPN teams."""
+    from app.season import service as season
+    from app.season.service import SeasonError
+
+    ctx = build_context(settings)
+    overrides = {}
+    for item in ns.map or []:
+        mid, _, tid = item.partition("=")
+        overrides[mid] = int(tid)
+    try:
+        preview = season.link_preview(ctx, ns.session_id, ns.league_id, overrides)
+        print(f"ESPN league {preview.league_id}: {preview.league_name}")
+        for m in preview.mapping:
+            print(
+                f"  {m.manager_id:>4}  {m.manager_name:<24} -> team {m.team_id:>2}  {m.team_name:<28} ({m.owner_name}; overlap {m.overlap:.0%}, {m.confidence})"
+            )
+        for w in preview.settings_warnings + preview.warnings:
+            print("  !", w)
+        if preview.unmatched_managers or preview.unmatched_teams:
+            print("  unmatched managers:", preview.unmatched_managers, "unmatched teams:", preview.unmatched_teams)
+        if not ns.apply:
+            print("preview only; rerun with --apply to store the link")
+            return 0
+        season.link_apply(ctx, ns.session_id, ns.league_id, {m.manager_id: m.team_id for m in preview.mapping})
+        print("linked")
+    except SeasonError as e:
+        print(f"error ({e.code}): {e.message}")
+        return 1
+    return 0
+
+
+def cmd_espn_sync(ns: argparse.Namespace) -> int:
+    from app.season import service as season
+    from app.season.service import SeasonError
+
+    ctx = build_context(settings)
+    try:
+        res = season.run_sync(ctx, ns.session_id, None)
+    except SeasonError as e:
+        print(f"error ({e.code}): {e.message}")
+        return 1
+    print(f"{res.summary} (fetched {res.fetched_at})")
+    names = {m.id: m.name for m in res.state.league.managers}
+    for c in res.changes:
+        print(f"  {names.get(c.manager_id, c.manager_id)}: +{c.added} -{c.dropped}")
+    for w in res.warnings:
+        print("  !", w)
+    return 0
+
+
+def _print_espn_week(ctx, session_id: str, period: int | None) -> int:
+    from app.season import service as season
+
+    ov = season.overview(ctx, session_id, None, period)
+    print(f"{ov.league_name}: matchup period {ov.current_period} (synced {ov.synced_at})")
+    names = ov.manager_names
+    for m in ov.matchups:
+        if m.away_manager_id is None or m.odds is None:
+            print(f"  {names[m.home_manager_id]}: bye")
+            continue
+        o = m.odds
+        print(
+            f"  {names[m.home_manager_id]} vs {names[m.away_manager_id]}: {o.expected_a:.2f} - {o.expected_b:.2f} cats, "
+            f"P(home win) {o.p_win_a:.0%}, tie {o.p_tie:.0%}, games {o.games_a}/{o.games_b}"
+        )
+    res = season.results(ctx, session_id, ov.current_period, None)
+    print("ESPN results so far:")
+    for r in res.results:
+        if r.away is None:
+            continue
+        print(f"  {names[r.home.manager_id]} {r.home.cats_won:.1f} - {r.away.cats_won:.1f} {names[r.away.manager_id]}")
+    print("power rankings:")
+    for p in ov.power:
+        arrow = ov.movement.get(p.manager_id, 0)
+        print(f"  {p.rank:>2}. {p.name:<24} {p.expected_cats:.2f} {'+' if arrow > 0 else ''}{arrow if arrow else ''}")
     return 0
 
 
@@ -205,15 +311,28 @@ def main(argv: list[str] | None = None) -> int:
     ev.add_argument("--budget-ms", type=int, default=2000)
     ev.add_argument("--refined-seeds", type=int, default=4)
     ev.add_argument("--out")
-    ev.add_argument("--user-model", help="alt_model drafts with this model spec, e.g. ridge, ens:rich, ens:rich:flat (opponents use the baseline)")
+    ev.add_argument(
+        "--user-model",
+        help="alt_model drafts with this model spec, e.g. ridge, ens:rich, ens:rich:flat (opponents use the baseline)",
+    )
     ev.add_argument("--target", default="2025-26")
     ev.set_defaults(fn=cmd_evaluate)
     se = sub.add_parser("season")
     se.add_argument("session_id")
-    se.add_argument("--week", help="ISO Monday date; default latest")
+    se.add_argument("--week", help="matchup period number when linked to ESPN; ISO Monday date for NBA logs")
+    se.add_argument("--nba-logs", action="store_true", help="use nba_api game logs even when linked to ESPN")
     se.add_argument("--season-type", default="Regular Season", choices=["Regular Season", "Pre Season", "Playoffs"])
     se.add_argument("--out", help="write an .xlsx")
     se.set_defaults(fn=cmd_season)
+    el = sub.add_parser("espn-link")
+    el.add_argument("session_id")
+    el.add_argument("league_id", type=int)
+    el.add_argument("--map", nargs="*", help="manual overrides, e.g. m10=7")
+    el.add_argument("--apply", action="store_true")
+    el.set_defaults(fn=cmd_espn_link)
+    es = sub.add_parser("espn-sync")
+    es.add_argument("session_id")
+    es.set_defaults(fn=cmd_espn_sync)
     bn = sub.add_parser("bench")
     bn.add_argument("--out")
     bn.set_defaults(fn=cmd_bench)

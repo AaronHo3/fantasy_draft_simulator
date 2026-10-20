@@ -7,7 +7,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from app.draft.events import EventType
-from app.league.config import LeagueConfig
+from app.league.config import CategoryDef, LeagueConfig
 from app.league.strategy import Strategy
 
 
@@ -487,3 +487,101 @@ class SyncResult(BaseModel):
     warnings: list[str]
     unknown_players: list[UnknownPlayerView]
     state: DraftStateView
+
+
+# --- season reads --------------------------------------------------------------------------------
+
+
+class TeamPowerView(BaseModel):
+    manager_id: str
+    name: str
+    is_user: bool
+    expected_cats: float
+    rank: int
+    cat_win_prob: dict[str, float]
+    z: dict[str, float]
+    n_players: int
+    n_ir: int
+
+
+class MatchupOddsView(BaseModel):
+    period: int
+    manager_a: str
+    manager_b: str
+    expected_a: float
+    expected_b: float
+    p_win_a: float
+    p_tie: float
+    p_win_b: float
+    cat_p_a: dict[str, float]
+    modal_score: list[float]
+    games_a: int
+    games_b: int
+    notes: list[str]
+
+
+class MatchupPairView(BaseModel):
+    period: int
+    home_manager_id: str
+    away_manager_id: str | None  # None = bye
+    odds: MatchupOddsView | None
+
+
+class MatchupResponse(BaseModel):
+    ids: ResponseIds
+    odds: MatchupOddsView
+
+
+class SeasonOverview(BaseModel):
+    ids: ResponseIds
+    linked: bool
+    league_name: str | None
+    synced_at: str | None
+    summary: str | None
+    warnings: list[str]
+    current_period: int
+    league_categories: list[CategoryDef]
+    manager_names: dict[str, str]
+    power: list[TeamPowerView]
+    movement: dict[str, int]  # previous rank - current rank (positive = climbed)
+    matchups: list[MatchupPairView]
+    user_matchup: MatchupPairView | None
+
+
+class FreeAgentView(BaseModel):
+    player: PlayerView
+    score: float
+    z: dict[str, float]
+    best_drop: PlayerView | None
+    drop_value: float
+    swap_delta: float
+    injury_status: str | None
+    percent_owned: float | None
+    flags: list[str]
+
+
+class FreeAgentsResponse(BaseModel):
+    ids: ResponseIds
+    items: list[FreeAgentView]
+    synced_at: str | None
+
+
+class WeekSideView(BaseModel):
+    manager_id: str
+    values: dict[str, float | None]
+    results: dict[str, str | None]
+    cats_won: float
+
+
+class WeekResultView(BaseModel):
+    period: int
+    home: WeekSideView
+    away: WeekSideView | None
+    winner: str
+
+
+class WeekResultsResponse(BaseModel):
+    ids: ResponseIds
+    period: int
+    results: list[WeekResultView]
+    projected: list[MatchupPairView]

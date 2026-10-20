@@ -1,7 +1,8 @@
-.PHONY: install dev backend frontend demo refresh test test-backend test-frontend bench export import typecheck openapi lint
+.PHONY: install dev backend frontend demo refresh test test-backend test-frontend bench export import typecheck openapi lint link sync season
 
 SESSION ?=
 FILE ?=
+LEAGUE ?=
 BACKEND_PORT ?= 8000
 FRONTEND_PORT ?= 5173
 
@@ -53,6 +54,12 @@ research:
 
 season:
 	cd backend && uv run python -m app.cli season $(SESSION) --out ../exports/season_week.xlsx
+
+link:
+	cd backend && uv run python -m app.cli espn-link $(SESSION) $(LEAGUE) --apply
+
+sync:
+	cd backend && uv run python -m app.cli espn-sync $(SESSION)
 
 build-snapshot:
 	cd backend && uv run python -m app.cli build-snapshot
