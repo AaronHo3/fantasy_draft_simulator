@@ -19,7 +19,8 @@ export function OpponentRosters() {
         </thead>
         <tbody>
           {state.league.managers.map((m) => {
-            const ids = state.rosters[m.id] ?? []
+            const drafted = state.rosters[m.id] ?? []
+            const ids = state.has_roster_moves ? state.current_rosters[m.id] ?? drafted : drafted
             return (
               <tr key={m.id} className={m.id === uid ? 'mine' : undefined}>
                 <th scope="row">
@@ -31,7 +32,7 @@ export function OpponentRosters() {
                   {ids.map((id, i) => (
                     <span key={id}>
                       {i > 0 ? ', ' : ''}
-                      <PlayerName playerId={id} /> <span className="muted">({positionsText(players[id]?.eligible_positions)})</span>
+                      <PlayerName playerId={id} /> <span className="muted">({positionsText(players[id]?.eligible_positions)}{!drafted.includes(id) ? ', added' : ''})</span>
                     </span>
                   ))}
                   {ids.length === 0 && <span className="muted">—</span>}

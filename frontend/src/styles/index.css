@@ -1256,3 +1256,89 @@ legend {
     width: 100vw;
   }
 }
+
+/* --- season screen ---------------------------------------------------------------------------- */
+.sync-bar .change {
+  white-space: nowrap;
+}
+.matchup-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 10px;
+}
+.matchup-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--surface);
+}
+.matchup-card.mine {
+  background: var(--mine);
+  border-color: var(--mine-border);
+}
+.matchup-card h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+.matchup-card .odds-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: baseline;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.matchup-card .odds b {
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.matchup-card .odds.win b {
+  color: var(--ok);
+}
+.matchup-card .odds.loss b {
+  color: var(--error);
+}
+.cat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 4px 10px;
+}
+.cat-grid .cat {
+  display: grid;
+  grid-template-columns: 44px 1fr 40px;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.cat-grid .cat .label {
+  color: var(--ink-2);
+}
+.cat-grid .cat .bar {
+  height: 8px;
+  background: var(--error-soft);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.cat-grid .cat .fill {
+  display: block;
+  height: 100%;
+  background: var(--ok);
+}
+.cat-grid .cat.fav-b .fill {
+  background: var(--error);
+}
+.cat-grid .cat.fav-b .bar {
+  background: var(--ok-soft);
+}
+.cat-grid .cat .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.matchup-card.compact .cat-grid {
+  grid-template-columns: repeat(2, 1fr);
+}
+.matchup-card .notes {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  font-size: 12px;
+}

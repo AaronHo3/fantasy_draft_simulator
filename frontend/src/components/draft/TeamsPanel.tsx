@@ -13,7 +13,9 @@ export function TeamsPanel() {
   const onClock = state.on_clock_manager_id
   const mid = selected ?? onClock ?? state.league.managers[0]?.id ?? null
   const m = state.league.managers.find((x) => x.id === mid)
-  const ids = mid ? state.rosters[mid] ?? [] : []
+  const drafted = mid ? state.rosters[mid] ?? [] : []
+  const ids = mid ? (state.has_roster_moves ? state.current_rosters[mid] ?? drafted : drafted) : []
+  const added = new Set(ids.filter((id) => !drafted.includes(id)))
   const counts: Record<string, number> = {}
   for (const id of ids) {
     const pp = players[id]?.primary_position ?? '?'
@@ -58,6 +60,7 @@ export function TeamsPanel() {
                   <span className="slot">{i + 1}</span>
                   <span className="who">
                     <PlayerName playerId={id} />
+                    {added.has(id) && <span className="badge accent" title="added after the draft (ESPN sync)"> added</span>}
                   </span>
                   <span className="side">
                     {players[id]?.team ?? '—'} · {positionsText(players[id]?.eligible_positions)}
