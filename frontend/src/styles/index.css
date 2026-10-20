@@ -1391,3 +1391,15 @@ legend {
 .matchup-card.compact .cat-grid.two-sided .cat {
   grid-template-columns: 70px 1fr 1fr;
 }
+.matchup-pick {
+  cursor: pointer;
+  border-radius: 8px;
+}
+.matchup-pick:hover .matchup-card,
+.matchup-pick:focus-visible .matchup-card {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.matchup-pick:focus-visible {
+  outline: none;
+}
