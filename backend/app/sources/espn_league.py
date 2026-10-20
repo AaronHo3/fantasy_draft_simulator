@@ -6,6 +6,7 @@ Verified against league 2075231076 on 2026-10-19 (see docs/DATA_SOURCES.md). Rea
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -13,9 +14,11 @@ from typing import Any
 import httpx
 
 from app.league.config import LeagueConfig, LineupMode, ScoringFormat
-from app.sources.base import RawResponse, SchemaError, with_retries
+from app.sources.base import FetchError, RawResponse, SchemaError, with_retries
 from app.sources.espn_private import STAT_ID_TO_CATEGORY, _slot_counts_to_lists
 from app.sources.espn_public import ESPN_BASE, ESPN_TIMEOUT_S, USER_AGENT
+
+log = logging.getLogger(__name__)
 
 LEAGUE_VIEWS = ("mTeam", "mRoster", "mSettings", "mMatchup", "mSchedule", "mTransactions2", "mStatus")
 ROSTER_MOVE_KINDS = frozenset({"ADD", "DROP", "TRADE"})
@@ -326,10 +329,40 @@ def _get_league(url: str, params: dict[str, Any], client: httpx.Client | None) -
     return with_retries(once, retry_on=(httpx.HTTPError,))
 
 
+def _merge_next_period_rosters(
+    payload: dict[str, Any], league_id: int, season_id: int, client: httpx.Client | None
+) -> None:
+    """Replace each team's roster with the view for the next scoring period.
+
+    ESPN's default ``mRoster`` view is the roster as it stood when the current scoring period (day)
+    opened, so an add/drop made today only shows up under ``scoringPeriodId = current + 1``.
+    Verified 2026-10-20 (an executed FREEAGENT transaction was missing from the default view).
+    Best effort: on any failure the default rosters are kept.
+    """
+    current = payload.get("scoringPeriodId") or (payload.get("status") or {}).get("latestScoringPeriod")
+    if not current:
+        return
+    try:
+        nxt = _get_league(
+            league_url(league_id, season_id), {"view": ["mRoster"], "scoringPeriodId": int(current) + 1}, client
+        )
+    except (httpx.HTTPError, FetchError, SchemaError, LeagueAccessError) as exc:
+        log.warning("next-period roster view unavailable, using the default view: %s", exc)
+        return
+    rosters = {
+        int(t["id"]): t.get("roster") for t in (nxt.payload or {}).get("teams", []) if isinstance(t, dict) and "id" in t
+    }
+    for t in payload.get("teams", []):
+        r = rosters.get(int(t.get("id", -1)))
+        if isinstance(r, dict) and isinstance(r.get("entries"), list):
+            t["roster"] = r
+
+
 def fetch_league_raw(league_id: int, season_id: int, client: httpx.Client | None = None) -> RawResponse:
     raw = _get_league(league_url(league_id, season_id), {"view": list(LEAGUE_VIEWS)}, client)
     if not isinstance(raw.payload, dict) or "teams" not in raw.payload:
         raise SchemaError("ESPN league response lacks teams")
+    _merge_next_period_rosters(raw.payload, league_id, season_id, client)
     return raw
 
 

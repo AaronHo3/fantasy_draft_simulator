@@ -88,6 +88,11 @@ was inspected. Anything else is marked planned or unverified.
   {score,result}}}`; `away` absent on a bye week), `transactions[]` (type DRAFT / ROSTER / WAIVER /
   FREEAGENT / FUTURE_ROSTER / TRADE_ACCEPT, status EXECUTED / CANCELED / FAILED_*, `items[]` with
   type ADD / DROP / LINEUP / DRAFT / TRADE, playerId, fromTeamId, toTeamId, `proposedDate` ms).
+- The default `mRoster` view is the roster as it stood when the current scoring period (day)
+  opened: an add/drop executed today appears only under `?view=mRoster&scoringPeriodId=<current+1>`
+  (verified 2026-10-20 with an executed FREEAGENT transaction missing from the default view). The
+  fetch therefore makes a second request for the next period's rosters and merges them in; on failure
+  it keeps the default view.
 - All 171 rostered player ids resolved to snapshot players through `espn_id`; unknown ids are kept
   as owned placeholders `espn:<id>` (no projection) so they never appear as free agents.
 - Sync also refreshes `/players?view=kona_player_info` (above) for live injury status and

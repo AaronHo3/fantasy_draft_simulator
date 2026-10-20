@@ -100,3 +100,56 @@ def test_parse_final_scoring_period_matches_calendar(league):
 
     assert league.settings.final_scoring_period == 160
     assert calendar_matches_espn("2026-27", league.settings.final_scoring_period)
+
+
+def test_fetch_uses_next_scoring_period_roster(monkeypatch):
+    """ESPN's default roster view lags same-day moves; the fetch merges the roster for the next scoring period."""
+    base = json.loads(FIXTURE.read_text())
+    calls = []
+
+    def fake_get(self, url, params=None, headers=None):
+        calls.append(dict(params))
+        if "scoringPeriodId" in params:  # second call: roster view for the next period
+            payload = {"teams": []}
+            for t in base["teams"]:
+                entries = list(t["roster"]["entries"])
+                if t["id"] == 1:
+                    entries = entries[1:] + [
+                        {
+                            "playerId": 4431785,
+                            "lineupSlotId": 0,
+                            "injuryStatus": "ACTIVE",
+                            "acquisitionType": "ADD",
+                            "playerPoolEntry": {"player": {"id": 4431785, "fullName": "Scotty Pippen Jr."}},
+                        }
+                    ]
+                payload["teams"].append({"id": t["id"], "roster": {"entries": entries}})
+            return httpx.Response(200, json=payload, request=httpx.Request("GET", url))
+        return httpx.Response(200, json=base, request=httpx.Request("GET", url))
+
+    monkeypatch.setattr(httpx.Client, "get", fake_get)
+    raw = fetch_league_raw(2075231076, 2027)
+    assert (
+        len(calls) == 2
+        and calls[1]["scoringPeriodId"] == base["scoringPeriodId"] + 1
+        and calls[1]["view"] == ["mRoster"]
+    )
+    league = parse_league(raw.payload, 2075231076, 2027, "now")
+    names = {e.name for e in league.team(1).roster}
+    assert "Scotty Pippen Jr." in names and "Tyrese Maxey" not in names
+    assert len(league.team(7).roster) == 14  # other teams untouched
+
+
+def test_fetch_keeps_default_roster_when_next_period_view_fails(monkeypatch):
+    base = json.loads(FIXTURE.read_text())
+    calls = []
+
+    def fake_get(self, url, params=None, headers=None):
+        calls.append(dict(params))
+        if "scoringPeriodId" in params:
+            return httpx.Response(500, json={}, request=httpx.Request("GET", url))
+        return httpx.Response(200, json=base, request=httpx.Request("GET", url))
+
+    monkeypatch.setattr(httpx.Client, "get", fake_get)
+    league = parse_league(fetch_league_raw(2075231076, 2027).payload, 2075231076, 2027, "now")
+    assert "Tyrese Maxey" in {e.name for e in league.team(1).roster}
