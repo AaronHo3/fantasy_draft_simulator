@@ -137,3 +137,101 @@ def test_batch_is_atomic(store):
     with pytest.raises(DraftError):
         store.append_batch(sid, items)
     assert store.state(sid).drafted_player_ids == frozenset()
+
+
+# --- post-draft roster changes ----------------------------------------------------------------
+
+
+def small_complete_session(store):
+    """Two managers, two starters + one bench, every pick committed -> a complete draft."""
+    cfg = demo_league_config(user_pick=1, n_managers=2).model_copy(
+        update={"starting_slots": ["G", "F"], "bench_slots": 1, "ir_slots": 1}
+    )
+    sid = store.create_session(cfg, name="small")
+    for i in range(cfg.n_managers * cfg.roster_size):
+        commit(store, sid, f"p{i + 1}")
+    st = store.state(sid)
+    assert st.is_complete
+    return sid
+
+
+def roster_change(store, sid, moves, key=None, expected=None):
+    return store.append(
+        sid, EventType.roster_changed, {"moves": moves, "effective_at": "2026-10-19T00:00:00+00:00"}, key, expected
+    )
+
+
+def test_roster_changed_requires_complete_draft(store):
+    sid = new_session(store)
+    commit(store, sid, "p1")
+    with pytest.raises(DraftError) as e:
+        roster_change(store, sid, [{"manager_id": "m01", "added": ["fa1"], "dropped": ["p1"], "source_ref": "manual"}])
+    assert e.value.code == "draft_incomplete"
+
+
+def test_roster_changed_trade_is_atomic(store):
+    sid = small_complete_session(store)
+    before = store.state(sid)
+    assert before.current_roster("m01") == ("p1", "p4", "p5")  # snake: m01 picks 1, 4, 5
+    assert before.current_roster("m02") == ("p2", "p3", "p6")
+    _, st, _ = roster_change(
+        store,
+        sid,
+        [
+            {"manager_id": "m01", "added": ["p2"], "dropped": ["p1"], "source_ref": "espn:tx1"},
+            {"manager_id": "m02", "added": ["p1"], "dropped": ["p2"], "source_ref": "espn:tx1"},
+        ],
+    )
+    assert st.current_roster("m01") == ("p4", "p5", "p2")
+    assert st.current_roster("m02") == ("p3", "p6", "p1")
+    assert st.owned_player_ids == before.owned_player_ids
+    assert st.has_roster_moves and len(st.moves) == 2
+    assert st.draft_revision == st.last_seq
+
+
+def test_roster_changed_rejects_add_of_owned_player(store):
+    sid = small_complete_session(store)
+    with pytest.raises(DraftError) as e:
+        roster_change(store, sid, [{"manager_id": "m01", "added": ["p2"], "dropped": ["p1"], "source_ref": "manual"}])
+    assert e.value.code == "roster_conflict"
+    assert store.state(sid).current_roster("m01") == ("p1", "p4", "p5")
+
+
+def test_roster_changed_rejects_drop_by_non_owner(store):
+    sid = small_complete_session(store)
+    with pytest.raises(DraftError) as e:
+        roster_change(store, sid, [{"manager_id": "m01", "added": [], "dropped": ["p2"], "source_ref": "manual"}])
+    assert e.value.code == "roster_conflict"
+
+
+def test_roster_changed_allows_ir_size(store):
+    sid = small_complete_session(store)
+    _, st, _ = roster_change(
+        store, sid, [{"manager_id": "m01", "added": ["fa1"], "dropped": [], "source_ref": "manual"}]
+    )
+    assert st.current_roster("m01") == ("p1", "p4", "p5", "fa1")
+    assert "fa1" in st.owned_player_ids
+    assert st.current_rosters()["m02"] == ("p2", "p3", "p6")
+
+
+def test_undo_locked_after_roster_change(store):
+    sid = small_complete_session(store)
+    roster_change(store, sid, [{"manager_id": "m01", "added": ["fa1"], "dropped": ["p1"], "source_ref": "manual"}])
+    with pytest.raises(DraftError) as e:
+        store.append(sid, EventType.pick_undone, {})
+    assert e.value.code == "draft_locked"
+    with pytest.raises(DraftError) as e2:
+        store.append(sid, EventType.pick_corrected, {"overall": 1, "player_id": "zz"})
+    assert e2.value.code == "draft_locked"
+
+
+def test_state_view_exposes_current_rosters(store):
+    from app.recommend.service import state_view
+
+    sid = small_complete_session(store)
+    roster_change(store, sid, [{"manager_id": "m01", "added": ["fa1"], "dropped": ["p1"], "source_ref": "manual"}])
+    view = state_view(store.state(sid))
+    assert view.current_rosters["m01"] == ["p4", "p5", "fa1"]
+    assert "p1" not in view.owned_player_ids and "fa1" in view.owned_player_ids
+    assert view.has_roster_moves is True
+    assert view.rosters["m01"] == ["p1", "p4", "p5"]  # draft record is unchanged

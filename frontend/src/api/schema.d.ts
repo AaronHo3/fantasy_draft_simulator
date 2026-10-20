@@ -550,6 +550,14 @@ export interface components {
             };
             /** Drafted Player Ids */
             drafted_player_ids: string[];
+            /** Current Rosters */
+            current_rosters: {
+                [key: string]: string[];
+            };
+            /** Owned Player Ids */
+            owned_player_ids: string[];
+            /** Has Roster Moves */
+            has_roster_moves: boolean;
             /** Remaining User Picks */
             remaining_user_picks: number;
             /** Warnings */
@@ -585,7 +593,7 @@ export interface components {
          * EventType
          * @enum {string}
          */
-        EventType: "session_created" | "pick_committed" | "pick_undone" | "pick_corrected" | "keeper_assigned" | "order_changed" | "strategy_changed" | "league_updated" | "format_confirmed" | "note";
+        EventType: "session_created" | "pick_committed" | "pick_undone" | "pick_corrected" | "keeper_assigned" | "order_changed" | "strategy_changed" | "league_updated" | "format_confirmed" | "note" | "roster_changed";
         /** EventView */
         EventView: {
             /** Seq */
@@ -847,6 +855,17 @@ export interface components {
              * @default false
              */
             strict_eligibility: boolean;
+            /** Espn League Id */
+            espn_league_id?: number | null;
+            /**
+             * Espn Team Ids
+             * @description manager id -> ESPN team id
+             */
+            espn_team_ids?: {
+                [key: string]: number;
+            };
+            /** Espn Linked At */
+            espn_linked_at?: string | null;
         };
         /** LeagueProfilesResponse */
         LeagueProfilesResponse: {

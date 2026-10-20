@@ -72,6 +72,9 @@ class DraftStateView(BaseModel):
     schedule: list[PickView]
     rosters: dict[str, list[str]]
     drafted_player_ids: list[str]
+    current_rosters: dict[str, list[str]]  # draft picks ± post-draft moves (adds, drops, trades)
+    owned_player_ids: list[str]
+    has_roster_moves: bool
     remaining_user_picks: int
     warnings: list[str]
     strategy: Strategy

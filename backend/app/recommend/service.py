@@ -67,8 +67,12 @@ def player_view(snap: Snapshot, i: int, state: DraftState | None = None) -> S.Pl
 
 def user_context(state: DraftState, snap: Snapshot, extra_roster: tuple[str, ...] = ()) -> RankingContext:
     uid = state.league.user_manager_id
-    roster = tuple(r.player_id for r in state.roster(uid)) + extra_roster
-    drafted = state.drafted_player_ids | frozenset(extra_roster)
+    if state.is_complete:  # post-draft: rank against current ownership (free agency)
+        roster = state.current_roster(uid) + extra_roster
+        drafted = state.owned_player_ids | frozenset(extra_roster)
+    else:
+        roster = tuple(r.player_id for r in state.roster(uid)) + extra_roster
+        drafted = state.drafted_player_ids | frozenset(extra_roster)
     remaining = state.remaining_picks_for(uid) - len(extra_roster)
     cp = state.current_pick
     total_remaining = sum(1 for p in state.schedule if p.overall not in state.picks) - len(extra_roster)
@@ -130,12 +134,20 @@ def reasons_for(
     out: list[str] = []
     pos = [j for j in order if contrib[j] > 0.15][:3]
     if res is not None and len(res.marginal) and strategy.roster_aware:
-        near = [keys[j] for j in order if contrib[j] > 0.15 and res.marginal[j] >= 0.75 and abs(res.roster_z[j]) < 0.9 * strategy.roster_scale][:2]
+        near = [
+            keys[j]
+            for j in order
+            if contrib[j] > 0.15 and res.marginal[j] >= 0.75 and abs(res.roster_z[j]) < 0.9 * strategy.roster_scale
+        ][:2]
         capped = [keys[j] for j in range(len(keys)) if res.marginal[j] < 0.5 and cand.z[j] > 0.8]
         if near:
-            out.append("Lifts " + " and ".join(labels[k].lower() for k in near) + ", where your roster is near the line.")
+            out.append(
+                "Lifts " + " and ".join(labels[k].lower() for k in near) + ", where your roster is near the line."
+            )
         if capped:
-            out.append("Their " + " and ".join(labels[k].lower() for k in capped) + " add little: you already lead there.")
+            out.append(
+                "Their " + " and ".join(labels[k].lower() for k in capped) + " add little: you already lead there."
+            )
     if pos:
         bits = []
         for j in pos:
@@ -401,6 +413,9 @@ def state_view(state: DraftState) -> S.DraftStateView:
         schedule=[pv(p) for p in state.schedule],
         rosters={m: [r.player_id for r in rs] for m, rs in state.rosters().items()},
         drafted_player_ids=sorted(state.drafted_player_ids),
+        current_rosters={m: list(r) for m, r in state.current_rosters().items()},
+        owned_player_ids=sorted(state.owned_player_ids),
+        has_roster_moves=state.has_roster_moves,
         remaining_user_picks=state.remaining_picks_for(state.league.user_manager_id),
         warnings=list(state.warnings),
         strategy=state.strategy,
@@ -419,9 +434,17 @@ def league_profiles(snap: Snapshot, state: DraftState, seed: int) -> S.LeaguePro
         tot = _team_totals(snap, idxs)
         vals = category_values(tot, league.categories)
         z = {k: float(st.z_totals[idxs, j].sum()) if idxs else 0.0 for j, k in enumerate(keys)}
-        rows.append({"manager_id": m.id, "name": m.name, "is_user": m.id == league.user_manager_id,
-                     "n_players": len(idxs), "totals": vals, "z": z,
-                     "attempts": {"FGA": float(tot[PRIM_IDX["FGA"]]), "FTA": float(tot[PRIM_IDX["FTA"]])}})
+        rows.append(
+            {
+                "manager_id": m.id,
+                "name": m.name,
+                "is_user": m.id == league.user_manager_id,
+                "n_players": len(idxs),
+                "totals": vals,
+                "z": z,
+                "attempts": {"FGA": float(tot[PRIM_IDX["FGA"]]), "FTA": float(tot[PRIM_IDX["FTA"]])},
+            }
+        )
     ranks: dict[str, dict[str, int | None]] = {r["manager_id"]: {} for r in rows}
     for c in league.categories:
         scored = [(r["manager_id"], r["totals"][c.key]) for r in rows]
@@ -435,10 +458,17 @@ def league_profiles(snap: Snapshot, state: DraftState, seed: int) -> S.LeaguePro
     out = []
     for r in rows:
         rk = ranks[r["manager_id"]]
-        out.append(S.ManagerProfile(
-            manager_id=r["manager_id"], name=r["name"], is_user=r["is_user"], n_players=r["n_players"],
-            totals={k: (None if v is None else round(v, 4)) for k, v in r["totals"].items()},
-            attempts={k: round(v, 1) for k, v in r["attempts"].items()},
-            z={k: round(v, 3) for k, v in r["z"].items()}, rank=rk,
-            categories_top3=sum(1 for v in rk.values() if v is not None and v <= 3)))
+        out.append(
+            S.ManagerProfile(
+                manager_id=r["manager_id"],
+                name=r["name"],
+                is_user=r["is_user"],
+                n_players=r["n_players"],
+                totals={k: (None if v is None else round(v, 4)) for k, v in r["totals"].items()},
+                attempts={k: round(v, 1) for k, v in r["attempts"].items()},
+                z={k: round(v, 3) for k, v in r["z"].items()},
+                rank=rk,
+                categories_top3=sum(1 for v in rk.values() if v is not None and v <= 3),
+            )
+        )
     return S.LeagueProfilesResponse(ids=response_ids(state, snap, seed), keys=keys, managers=out)

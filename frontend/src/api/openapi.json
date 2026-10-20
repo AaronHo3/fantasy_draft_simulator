@@ -1620,6 +1620,27 @@
       "type": "array",
       "title": "Drafted Player Ids"
      },
+     "current_rosters": {
+      "additionalProperties": {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "type": "object",
+      "title": "Current Rosters"
+     },
+     "owned_player_ids": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Owned Player Ids"
+     },
+     "has_roster_moves": {
+      "type": "boolean",
+      "title": "Has Roster Moves"
+     },
      "remaining_user_picks": {
       "type": "integer",
       "title": "Remaining User Picks"
@@ -1655,6 +1676,9 @@
      "schedule",
      "rosters",
      "drafted_player_ids",
+     "current_rosters",
+     "owned_player_ids",
+     "has_roster_moves",
      "remaining_user_picks",
      "warnings",
      "strategy",
@@ -1739,7 +1763,8 @@
      "strategy_changed",
      "league_updated",
      "format_confirmed",
-     "note"
+     "note",
+     "roster_changed"
     ],
     "title": "EventType"
    },
@@ -2364,6 +2389,37 @@
       "type": "boolean",
       "title": "Strict Eligibility",
       "default": false
+     },
+     "espn_league_id": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Espn League Id"
+     },
+     "espn_team_ids": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Espn Team Ids",
+      "description": "manager id -> ESPN team id"
+     },
+     "espn_linked_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Espn Linked At"
      }
     },
     "type": "object",
