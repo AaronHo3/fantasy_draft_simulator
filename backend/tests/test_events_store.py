@@ -235,3 +235,23 @@ def test_state_view_exposes_current_rosters(store):
     assert "p1" not in view.owned_player_ids and "fa1" in view.owned_player_ids
     assert view.has_roster_moves is True
     assert view.rosters["m01"] == ["p1", "p4", "p5"]  # draft record is unchanged
+
+
+def test_session_sync_roundtrip(store):
+    sid = new_session(store)
+    assert store.get_sync(sid) is None
+    rec = {
+        "league_id": 1,
+        "fetched_at": "2026-10-19T00:00:00+00:00",
+        "summary": "ESPN sync: 0 adds",
+        "warnings": [],
+        "changes": [],
+        "power": None,
+        "current_period": 1,
+    }
+    store.set_sync(sid, rec)
+    assert store.get_sync(sid) == rec
+    store.set_sync(sid, {**rec, "fetched_at": "later"})
+    assert store.get_sync(sid)["fetched_at"] == "later"
+    store.delete_session(sid)
+    assert store.get_sync(sid) is None

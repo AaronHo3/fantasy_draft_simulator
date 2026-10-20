@@ -24,6 +24,10 @@ CREATE TABLE IF NOT EXISTS events (
   PRIMARY KEY (session_id, seq), UNIQUE (session_id, idempotency_key),
   FOREIGN KEY (session_id) REFERENCES sessions(id)
 );
+CREATE TABLE IF NOT EXISTS session_sync (
+  session_id TEXT PRIMARY KEY, league_id INTEGER, fetched_at TEXT, summary TEXT, record_json TEXT NOT NULL,
+  FOREIGN KEY (session_id) REFERENCES sessions(id)
+);
 """
 
 
@@ -121,9 +125,30 @@ class SessionStore:
         with self._lock:
             self._conn.execute("BEGIN")
             self._conn.execute("DELETE FROM events WHERE session_id=?", (session_id,))
+            self._conn.execute("DELETE FROM session_sync WHERE session_id=?", (session_id,))
             self._conn.execute("DELETE FROM sessions WHERE id=?", (session_id,))
             self._conn.execute("COMMIT")
             self._state_cache.pop(session_id, None)
+
+    # --- sync cache (bookkeeping only; never league truth) ---------------------------------
+    def set_sync(self, session_id: str, record: dict[str, Any]) -> None:
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO session_sync VALUES (?,?,?,?,?) ON CONFLICT(session_id) DO UPDATE SET "
+                "league_id=excluded.league_id, fetched_at=excluded.fetched_at, summary=excluded.summary, "
+                "record_json=excluded.record_json",
+                (
+                    session_id,
+                    record.get("league_id"),
+                    record.get("fetched_at"),
+                    record.get("summary"),
+                    json.dumps(record),
+                ),
+            )
+
+    def get_sync(self, session_id: str) -> dict[str, Any] | None:
+        r = self._conn.execute("SELECT record_json FROM session_sync WHERE session_id=?", (session_id,)).fetchone()
+        return None if r is None else json.loads(r[0])
 
     # --- events ---------------------------------------------------------------------------
     def events(self, session_id: str) -> list[Event]:

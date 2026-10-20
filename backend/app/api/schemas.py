@@ -419,3 +419,71 @@ class LeagueProfilesResponse(BaseModel):
     keys: list[str]
     managers: list[ManagerProfile]
     unit: str = "projected season totals (per-game × projected games); rates are makes ÷ attempts"
+
+
+# --- ESPN league link / sync ------------------------------------------------------------------
+
+
+class LinkRequest(BaseModel):
+    league_id: int = Field(gt=0)
+    overrides: dict[str, int] = Field(default_factory=dict, description="manager id -> ESPN team id")
+
+
+class EspnTeamView(BaseModel):
+    team_id: int
+    name: str
+    owner_name: str
+    n_players: int
+
+
+class TeamMatchView(BaseModel):
+    manager_id: str
+    manager_name: str
+    team_id: int
+    team_name: str
+    owner_name: str
+    overlap: float
+    confidence: str
+
+
+class LinkPreview(BaseModel):
+    league_id: int
+    league_name: str
+    teams: list[EspnTeamView]
+    mapping: list[TeamMatchView]
+    unmatched_managers: list[str]
+    unmatched_teams: list[int]
+    settings_warnings: list[str]
+    warnings: list[str]
+
+
+class LinkApplyRequest(BaseModel):
+    league_id: int = Field(gt=0)
+    mapping: dict[str, int]
+
+
+class SyncRequest(BaseModel):
+    expected_revision: int | None = None
+
+
+class RosterDiffView(BaseModel):
+    manager_id: str
+    team_id: int
+    added: list[str]
+    dropped: list[str]
+    source_refs: list[str]
+
+
+class UnknownPlayerView(BaseModel):
+    espn_id: int
+    name: str
+
+
+class SyncResult(BaseModel):
+    ids: ResponseIds
+    fetched_at: str
+    summary: str
+    changes: list[RosterDiffView]
+    warnings: list[str]
+    unknown_players: list[UnknownPlayerView]
+    state: DraftStateView

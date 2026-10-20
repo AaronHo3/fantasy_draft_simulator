@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.deps import build_context, set_context
 from app.api.routes import router
+from app.api.season_routes import router as season_router
 from app.settings import Settings
 from app.settings import settings as default_settings
 
@@ -33,6 +34,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(title="ESPN 9-cat Draft Copilot", version="0.1.0", lifespan=lifespan)
     app.add_middleware(CORSMiddleware, allow_origins=cfg.cors_origins, allow_methods=["*"], allow_headers=["*"])
     app.include_router(router)
+    app.include_router(season_router)
     return app
 
 

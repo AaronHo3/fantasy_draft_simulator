@@ -35,5 +35,14 @@ class Settings(BaseSettings):
     def snapshots_dir(self) -> Path:
         return self.data_dir / "nba" / "snapshots"
 
+    @property
+    def live_dir(self) -> Path:
+        """Per-league live status written by ESPN sync (gitignored under data/nba)."""
+        return self.data_dir / "nba" / "live"
+
+    @property
+    def schedule_path(self) -> Path:
+        return self.data_dir / "nba" / "normalized" / "schedule.parquet"
+
 
 settings = Settings()
