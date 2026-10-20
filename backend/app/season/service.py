@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -26,7 +26,7 @@ from app.season.live_status import status_overlay, write_live_status
 from app.season.power import matchup_odds, power_rankings
 from app.season.results import week_results
 from app.season.sync import SyncPlan, plan_sync
-from app.season.weeks import calendar_matches_espn, current_period
+from app.season.weeks import calendar_matches_espn, current_period, period_window
 from app.sources.base import FetchError, SchemaError
 from app.sources.espn_league import EspnLeague, LeagueAccessError, parse_league, settings_diff
 
@@ -223,6 +223,10 @@ def run_sync(ctx: AppContext, session_id: str, expected_revision: int | None) ->
     _refresh_players(ctx, league_id, state.league.season, warnings)
     previous = ctx.store.get_sync(session_id) or {}
     roster_changed = any(t == EventType.roster_changed for t, _, _ in plan.events)
+    period_now = league.settings.current_matchup_period or current_period(state.league.season, _today())
+    pairs_now = _pairs(ctx, snap, new_state, league, period_now, ctx.settings.default_seed)
+    if pairs_now:
+        record_predictions(ctx, session_id, new_state, pairs_now, period_now)
     ctx.store.set_sync(
         session_id,
         {
@@ -263,6 +267,126 @@ def run_sync(ctx: AppContext, session_id: str, expected_revision: int | None) ->
         warnings=warnings,
         unknown_players=[S.UnknownPlayerView(espn_id=e, name=n) for e, n in plan.unknown_players],
         state=svc.state_view(new_state),
+    )
+
+
+# --- predictions log ------------------------------------------------------------------------------
+
+
+def _today() -> date:
+    """US calendar date (UTC minus 6 h, like the schedule model); patched in tests."""
+    return (datetime.now(UTC) - timedelta(hours=6)).date()
+
+
+def record_predictions(
+    ctx: AppContext, session_id: str, state: DraftState, pairs: list[S.MatchupPairView], period: int
+) -> None:
+    """Write this period's projected winners. Once the period has started the rows are frozen."""
+    try:
+        started = _today() >= period_window(state.league.season, period)[0]
+    except ValueError:
+        started = False
+    existing = {(r["period"], r["home_manager_id"]): r for r in ctx.store.predictions(session_id)}
+    now = now_iso()
+    for pair in pairs:
+        prev = existing.get((period, pair.home_manager_id))
+        if prev is not None and prev.get("locked"):
+            continue
+        if prev is not None and started:
+            # the week began since the last write: freeze the last pre-week projection as it was
+            ctx.store.upsert_prediction(session_id, period, pair.home_manager_id, {**prev, "locked": True})
+            continue
+        o = pair.odds
+        if o is None:
+            winner, p_winner, p_tie = None, None, None
+        else:
+            home_wins = o.p_win_a > o.p_win_b or (o.p_win_a == o.p_win_b and o.expected_a >= o.expected_b)
+            winner = pair.home_manager_id if home_wins else pair.away_manager_id
+            p_winner, p_tie = (o.p_win_a if home_wins else o.p_win_b), o.p_tie
+        ctx.store.upsert_prediction(
+            session_id,
+            period,
+            pair.home_manager_id,
+            {
+                "period": period,
+                "home_manager_id": pair.home_manager_id,
+                "away_manager_id": pair.away_manager_id,
+                "predicted_winner": winner,
+                "p_winner": p_winner,
+                "p_tie": p_tie,
+                "expected_home": o.expected_a if o else None,
+                "expected_away": o.expected_b if o else None,
+                "locked": started,
+                "predicted_at": now,
+            },
+        )
+
+
+def _actual_winner(
+    league: EspnLeague | None, state: DraftState, rec: dict[str, Any]
+) -> tuple[str | None, dict[str, float] | None]:
+    """ESPN's decided result for a prediction row: (winner id | 'tie' | None, cats by manager)."""
+    if league is None or rec.get("away_manager_id") is None:
+        return None, None
+    t2m = _team_to_manager(state)
+    for r in week_results(league, int(rec["period"]), t2m, state.league.categories):
+        if r.away is None or r.home.manager_id != rec["home_manager_id"]:
+            continue
+        cats = {r.home.manager_id: r.home.cats_won, r.away.manager_id: r.away.cats_won}
+        try:
+            over = _today() > period_window(state.league.season, int(rec["period"]))[1]
+        except ValueError:
+            over = False
+        if r.winner in ("HOME", "AWAY", "TIE"):
+            winner = {"HOME": r.home.manager_id, "AWAY": r.away.manager_id, "TIE": "tie"}[r.winner]
+        elif over:
+            winner = (
+                r.home.manager_id
+                if r.home.cats_won > r.away.cats_won
+                else r.away.manager_id
+                if r.away.cats_won > r.home.cats_won
+                else "tie"
+            )
+        else:
+            return None, cats
+        return winner, cats
+    return None, None
+
+
+def predictions(ctx: AppContext, session_id: str) -> S.PredictionsResponse:
+    meta, state = _session(ctx, session_id)
+    snap = _snapshot(ctx, meta)
+    league_id = state.league.espn_league_id
+    league = cached_league(ctx, league_id, state.league.season) if league_id else None
+    rows: list[S.PredictionView] = []
+    decided = correct = 0
+    brier_sum = 0.0
+    by_period: dict[str, dict[str, int]] = {}
+    for rec in ctx.store.predictions(session_id):
+        winner, cats = _actual_winner(league, state, rec)
+        is_correct = None
+        if winner is not None and rec.get("predicted_winner") is not None:
+            is_correct = winner == rec["predicted_winner"]
+            decided += 1
+            correct += int(is_correct)
+            outcome = 1.0 if is_correct else 0.5 if winner == "tie" else 0.0
+            brier_sum += (float(rec["p_winner"]) - outcome) ** 2
+            bp = by_period.setdefault(str(rec["period"]), {"n_decided": 0, "n_correct": 0})
+            bp["n_decided"] += 1
+            bp["n_correct"] += int(is_correct)
+        rows.append(S.PredictionView(**rec, actual_winner=winner, actual_cats=cats, correct=is_correct))
+    n_pred = sum(1 for r in rows if r.predicted_winner is not None)
+    return S.PredictionsResponse(
+        ids=svc.response_ids(state, snap, ctx.settings.default_seed),
+        predictions=rows,
+        summary=S.PredictionSummary(
+            n_predicted=n_pred,
+            n_decided=decided,
+            n_correct=correct,
+            hit_rate=(correct / decided) if decided else None,
+            brier=(brier_sum / decided) if decided else None,
+            by_period=by_period,
+        ),
     )
 
 
@@ -331,6 +455,8 @@ def overview(ctx: AppContext, session_id: str, seed: int | None, period: int | N
         movement = {p.manager_id: prev_rank[p.manager_id] - p.rank for p in power if p.manager_id in prev_rank}
     period_n = _period(state, rec, period)
     pairs = _pairs(ctx, snap, state, league, period_n, seed)
+    if pairs:
+        record_predictions(ctx, session_id, state, pairs, period_n)
     uid = state.league.user_manager_id
     user_pair = next((p for p in pairs if uid in (p.home_manager_id, p.away_manager_id)), None)
     return S.SeasonOverview(

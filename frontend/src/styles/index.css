@@ -1342,3 +1342,49 @@ legend {
   padding-left: 16px;
   font-size: 12px;
 }
+
+.matchup-card .projected b {
+  font-size: 15px;
+}
+.cat-grid.two-sided {
+  grid-template-columns: 1fr;
+}
+.cat-grid.two-sided .cat {
+  grid-template-columns: 90px 1fr 1fr;
+}
+.cat-grid.two-sided .cat.head .side {
+  font-size: 11px;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.cat-grid.two-sided .side {
+  display: grid;
+  grid-template-columns: 1fr 40px;
+  align-items: center;
+  gap: 6px;
+}
+.cat-grid.two-sided .side .bar {
+  background: var(--surface-3);
+}
+.cat-grid.two-sided .side .fill {
+  background: var(--border-strong);
+}
+.cat-grid.two-sided .side.lead .fill {
+  background: var(--ok);
+}
+.cat-grid.two-sided .side.lead .num {
+  color: var(--ok);
+  font-weight: 600;
+}
+.cat-grid.two-sided .cat.fav-b .side .fill,
+.cat-grid.two-sided .cat.fav-a .side .fill {
+  background: var(--border-strong);
+}
+.cat-grid.two-sided .cat.fav-b .side.lead .fill,
+.cat-grid.two-sided .cat.fav-a .side.lead .fill {
+  background: var(--ok);
+}
+.matchup-card.compact .cat-grid.two-sided .cat {
+  grid-template-columns: 70px 1fr 1fr;
+}

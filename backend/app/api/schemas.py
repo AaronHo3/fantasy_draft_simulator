@@ -585,3 +585,34 @@ class WeekResultsResponse(BaseModel):
     period: int
     results: list[WeekResultView]
     projected: list[MatchupPairView]
+
+
+class PredictionView(BaseModel):
+    period: int
+    home_manager_id: str
+    away_manager_id: str | None
+    predicted_winner: str | None  # None on a bye
+    p_winner: float | None
+    p_tie: float | None
+    expected_home: float | None
+    expected_away: float | None
+    locked: bool  # frozen: the week had started when last written
+    predicted_at: str
+    actual_winner: str | None  # manager id, "tie", or None while undecided
+    actual_cats: dict[str, float] | None
+    correct: bool | None
+
+
+class PredictionSummary(BaseModel):
+    n_predicted: int
+    n_decided: int
+    n_correct: int
+    hit_rate: float | None
+    brier: float | None  # mean (p_winner - outcome)^2 over decided weeks; lower is better
+    by_period: dict[str, dict[str, int]]
+
+
+class PredictionsResponse(BaseModel):
+    ids: ResponseIds
+    predictions: list[PredictionView]
+    summary: PredictionSummary

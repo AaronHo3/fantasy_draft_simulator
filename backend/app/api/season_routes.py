@@ -73,3 +73,8 @@ def season_results(
     session_id: str, period: int = Query(ge=1, le=22), seed: int | None = None, ctx: AppContext = Depends(get_context)
 ):
     return _run(season.results, ctx, session_id, period, seed)
+
+
+@router.get("/sessions/{session_id}/season/predictions", response_model=S.PredictionsResponse)
+def season_predictions(session_id: str, ctx: AppContext = Depends(get_context)):
+    return _run(season.predictions, ctx, session_id)

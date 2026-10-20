@@ -24,6 +24,11 @@ CREATE TABLE IF NOT EXISTS events (
   PRIMARY KEY (session_id, seq), UNIQUE (session_id, idempotency_key),
   FOREIGN KEY (session_id) REFERENCES sessions(id)
 );
+CREATE TABLE IF NOT EXISTS season_predictions (
+  session_id TEXT NOT NULL, period INTEGER NOT NULL, home_manager_id TEXT NOT NULL, record_json TEXT NOT NULL,
+  PRIMARY KEY (session_id, period, home_manager_id),
+  FOREIGN KEY (session_id) REFERENCES sessions(id)
+);
 CREATE TABLE IF NOT EXISTS session_sync (
   session_id TEXT PRIMARY KEY, league_id INTEGER, fetched_at TEXT, summary TEXT, record_json TEXT NOT NULL,
   FOREIGN KEY (session_id) REFERENCES sessions(id)
@@ -126,6 +131,7 @@ class SessionStore:
             self._conn.execute("BEGIN")
             self._conn.execute("DELETE FROM events WHERE session_id=?", (session_id,))
             self._conn.execute("DELETE FROM session_sync WHERE session_id=?", (session_id,))
+            self._conn.execute("DELETE FROM season_predictions WHERE session_id=?", (session_id,))
             self._conn.execute("DELETE FROM sessions WHERE id=?", (session_id,))
             self._conn.execute("COMMIT")
             self._state_cache.pop(session_id, None)
@@ -145,6 +151,22 @@ class SessionStore:
                     json.dumps(record),
                 ),
             )
+
+    # --- weekly predictions log (frozen once a week starts; scored against ESPN later) --------
+    def upsert_prediction(self, session_id: str, period: int, home_manager_id: str, record: dict[str, Any]) -> None:
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO season_predictions VALUES (?,?,?,?) "
+                "ON CONFLICT(session_id, period, home_manager_id) DO UPDATE SET record_json=excluded.record_json",
+                (session_id, period, home_manager_id, json.dumps(record)),
+            )
+
+    def predictions(self, session_id: str) -> list[dict[str, Any]]:
+        rows = self._conn.execute(
+            "SELECT record_json FROM season_predictions WHERE session_id=? ORDER BY period, home_manager_id",
+            (session_id,),
+        ).fetchall()
+        return [json.loads(r[0]) for r in rows]
 
     def get_sync(self, session_id: str) -> dict[str, Any] | None:
         r = self._conn.execute("SELECT record_json FROM session_sync WHERE session_id=?", (session_id,)).fetchone()

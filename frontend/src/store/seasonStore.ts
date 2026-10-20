@@ -2,7 +2,7 @@
 // Sync is the only action that reaches ESPN; everything else reads the backend's stored state.
 import { create } from 'zustand'
 import { ApiError, api as defaultApi, type ApiClient } from '../api/client'
-import type { FreeAgentsResponse, SeasonOverview, SyncResult, WeekResultsResponse } from '../api/types'
+import type { FreeAgentsResponse, PredictionsResponse, SeasonOverview, SyncResult, WeekResultsResponse } from '../api/types'
 import { browserStorage, type KeyValueStorage } from '../lib/storage'
 import { useDraftStore } from './draftStore'
 
@@ -35,6 +35,9 @@ export interface SeasonStore {
   results: WeekResultsResponse | null
   resultsStatus: LoadStatus
   resultsError: string | null
+  predictions: PredictionsResponse | null
+  predictionsStatus: LoadStatus
+  predictionsError: string | null
   syncStatus: 'idle' | 'syncing' | 'error'
   syncError: string | null
   lastSync: SyncResult | null
@@ -44,6 +47,7 @@ export interface SeasonStore {
   sync(sessionId: string, expectedRevision?: number | null): Promise<boolean>
   loadFreeAgents(sessionId: string, query?: FreeAgentQuery): Promise<void>
   loadResults(sessionId: string, period: number): Promise<void>
+  loadPredictions(sessionId: string): Promise<void>
   setPeriod(period: number | null): void
   setAutoRefresh(minutes: AutoRefreshMinutes): void
   start(): void
@@ -97,6 +101,9 @@ export function createSeasonStore(overrides: Partial<SeasonDeps> = {}) {
       results: null,
       resultsStatus: 'idle',
       resultsError: null,
+      predictions: null,
+      predictionsStatus: 'idle',
+      predictionsError: null,
       syncStatus: 'idle',
       syncError: null,
       lastSync: null,
@@ -154,6 +161,16 @@ export function createSeasonStore(overrides: Partial<SeasonDeps> = {}) {
           set({ results, resultsStatus: 'ready' })
         } catch (e) {
           set({ resultsStatus: 'error', resultsError: errorText(e) })
+        }
+      },
+
+      async loadPredictions(sessionId) {
+        set({ predictionsStatus: 'loading', predictionsError: null })
+        try {
+          const predictions = await api.seasonPredictions(sessionId)
+          set({ predictions, predictionsStatus: 'ready' })
+        } catch (e) {
+          set({ predictionsStatus: 'error', predictionsError: errorText(e) })
         }
       },
 

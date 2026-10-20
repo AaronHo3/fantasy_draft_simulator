@@ -665,3 +665,111 @@ def test_overview_movement_survives_a_no_change_sync(client, complete_session):
     install_fakes(client, league_from_state(client, sid, fetched_at="2026-10-20T05:00:00+00:00", matchups=week1()))
     assert client.post(f"/api/sessions/{sid}/espn/sync", json={}).status_code == 200
     assert client.get(f"/api/sessions/{sid}/season/overview").json()["movement"] == moved
+
+
+# --- predictions log ----------------------------------------------------------------------------
+
+
+def decided_week1():
+    m = week1()
+    return (replace(m[0], winner="HOME"), *m[1:])
+
+
+def test_prediction_store_roundtrip(tmp_path):
+    from app.league.config import demo_league_config
+    from app.persistence.store import SessionStore
+
+    store = SessionStore(tmp_path / "p.sqlite")
+    sid = store.create_session(demo_league_config(), name="p")
+    assert store.predictions(sid) == []
+    rec = {
+        "period": 1,
+        "home_manager_id": "m01",
+        "away_manager_id": "m02",
+        "predicted_winner": "m01",
+        "p_winner": 0.7,
+        "locked": False,
+    }
+    store.upsert_prediction(sid, 1, "m01", rec)
+    store.upsert_prediction(sid, 1, "m01", {**rec, "p_winner": 0.8})
+    store.upsert_prediction(sid, 2, "m01", {**rec, "period": 2})
+    rows = store.predictions(sid)
+    assert [r["period"] for r in rows] == [1, 2] and rows[0]["p_winner"] == 0.8
+    store.delete_session(sid)
+    assert store.predictions(sid) == []
+
+
+def test_predictions_recorded_on_sync_and_locked_once_the_week_starts(client, complete_session, monkeypatch):
+    from datetime import date
+
+    from app.season import service as season
+
+    sid = complete_session
+    monkeypatch.setattr(season, "_today", lambda: date(2026, 10, 19))  # before period 1 starts
+    linked_and_synced(client, sid, week1())
+    r = client.get(f"/api/sessions/{sid}/season/predictions")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    row = next(p for p in body["predictions"] if p["period"] == 1 and p["home_manager_id"] == "m01")
+    assert row["away_manager_id"] == "m02" and row["locked"] is False
+    odds = client.get(f"/api/sessions/{sid}/season/overview").json()["user_matchup"]["odds"]
+    expected_winner = "m01" if odds["p_win_a"] >= odds["p_win_b"] else "m02"
+    assert row["predicted_winner"] == expected_winner and row["actual_winner"] is None and row["correct"] is None
+    assert body["summary"]["n_decided"] == 0
+    # the overview above rewrote the (still open) row; the frozen copy must match the last pre-week write
+    row = next(
+        p
+        for p in client.get(f"/api/sessions/{sid}/season/predictions").json()["predictions"]
+        if p["period"] == 1 and p["home_manager_id"] == "m01"
+    )
+    # the week starts: the prediction freezes even though rosters change afterwards
+    monkeypatch.setattr(season, "_today", lambda: date(2026, 10, 21))
+    st = client.get(f"/api/sessions/{sid}/state").json()
+    install_fakes(client, league_from_state(client, sid, fetched_at="2026-10-21T04:00:00+00:00", matchups=week1()))
+    assert client.post(f"/api/sessions/{sid}/espn/sync", json={}).status_code == 200
+    locked = next(
+        p
+        for p in client.get(f"/api/sessions/{sid}/season/predictions").json()["predictions"]
+        if p["period"] == 1 and p["home_manager_id"] == "m01"
+    )
+    assert locked["locked"] is True and locked["p_winner"] == row["p_winner"]
+    fa = client.get(f"/api/sessions/{sid}/season/free-agents", params={"limit": 1}).json()["items"][0]["player"][
+        "player_id"
+    ]
+    install_fakes(
+        client,
+        league_from_state(
+            client,
+            sid,
+            fetched_at="2026-10-22T04:00:00+00:00",
+            add=("m02", fa),
+            drop=("m02", st["current_rosters"]["m02"][0]),
+            matchups=week1(),
+        ),
+    )
+    assert client.post(f"/api/sessions/{sid}/espn/sync", json={}).status_code == 200
+    again = next(
+        p
+        for p in client.get(f"/api/sessions/{sid}/season/predictions").json()["predictions"]
+        if p["period"] == 1 and p["home_manager_id"] == "m01"
+    )
+    assert again["p_winner"] == row["p_winner"] and again["predicted_at"] == row["predicted_at"]
+
+
+def test_predictions_scored_against_espn_results(client, complete_session, monkeypatch):
+    from datetime import date
+
+    from app.season import service as season
+
+    sid = complete_session
+    monkeypatch.setattr(season, "_today", lambda: date(2026, 10, 19))
+    linked_and_synced(client, sid, decided_week1())
+    body = client.get(f"/api/sessions/{sid}/season/predictions").json()
+    row = next(p for p in body["predictions"] if p["period"] == 1 and p["home_manager_id"] == "m01")
+    assert row["actual_winner"] == "m01" and row["correct"] == (row["predicted_winner"] == "m01")
+    assert row["actual_cats"] == {"m01": row["actual_cats"]["m01"], "m02": row["actual_cats"]["m02"]}
+    s = body["summary"]
+    assert s["n_decided"] == 1 and s["n_correct"] == (1 if row["correct"] else 0)
+    assert s["hit_rate"] == pytest.approx(s["n_correct"] / 1) and 0 <= s["brier"] <= 1
+    bye = next(p for p in body["predictions"] if p["period"] == 1 and p["away_manager_id"] is None)
+    assert bye["predicted_winner"] is None and bye["actual_winner"] is None

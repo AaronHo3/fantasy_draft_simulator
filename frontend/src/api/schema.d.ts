@@ -452,6 +452,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sessions/{session_id}/season/predictions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Season Predictions */
+        get: operations["season_predictions_api_sessions__session_id__season_predictions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1241,6 +1258,63 @@ export interface components {
             drafted_by?: string | null;
             /** Drafted Overall */
             drafted_overall?: number | null;
+        };
+        /** PredictionSummary */
+        PredictionSummary: {
+            /** N Predicted */
+            n_predicted: number;
+            /** N Decided */
+            n_decided: number;
+            /** N Correct */
+            n_correct: number;
+            /** Hit Rate */
+            hit_rate: number | null;
+            /** Brier */
+            brier: number | null;
+            /** By Period */
+            by_period: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            };
+        };
+        /** PredictionView */
+        PredictionView: {
+            /** Period */
+            period: number;
+            /** Home Manager Id */
+            home_manager_id: string;
+            /** Away Manager Id */
+            away_manager_id: string | null;
+            /** Predicted Winner */
+            predicted_winner: string | null;
+            /** P Winner */
+            p_winner: number | null;
+            /** P Tie */
+            p_tie: number | null;
+            /** Expected Home */
+            expected_home: number | null;
+            /** Expected Away */
+            expected_away: number | null;
+            /** Locked */
+            locked: boolean;
+            /** Predicted At */
+            predicted_at: string;
+            /** Actual Winner */
+            actual_winner: string | null;
+            /** Actual Cats */
+            actual_cats: {
+                [key: string]: number;
+            } | null;
+            /** Correct */
+            correct: boolean | null;
+        };
+        /** PredictionsResponse */
+        PredictionsResponse: {
+            ids: components["schemas"]["ResponseIds"];
+            /** Predictions */
+            predictions: components["schemas"]["PredictionView"][];
+            summary: components["schemas"]["PredictionSummary"];
         };
         /** PuntAdvisorRequest */
         PuntAdvisorRequest: {
@@ -2703,6 +2777,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WeekResultsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    season_predictions_api_sessions__session_id__season_predictions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PredictionsResponse"];
                 };
             };
             /** @description Validation Error */

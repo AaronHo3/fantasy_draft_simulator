@@ -136,6 +136,10 @@ Once the draft is complete a **Season** tab appears.
      to make room, and the net change; live injury status and percent owned; search and position
      filters; click a name for the drawer.
    - **Results** — ESPN's actual per-category results for a week next to the projected odds.
+   - **Track record** — every week's projected winner (the side that takes more than half the
+     categories in most simulated weeks) with its chance, frozen when the matchup period starts, and
+     ESPN's actual winner once decided: hit rate and Brier score for the season-end comparison.
+     Each matchup card names the projected winner and shows both teams' per-category chances.
 5. Settings differences ESPN reports (for this league: lineups lock per game, i.e. daily, while the
    session is set to weekly) are shown as warnings and never applied automatically; change the
    session in Setup if you want the simulation to use daily lineups.

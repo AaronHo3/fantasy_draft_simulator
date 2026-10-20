@@ -40,13 +40,19 @@ describe('MatchupCard', () => {
     expect(screen.queryByTestId('cat-PTS')).toBeNull()
   })
 
-  it('highlights the favored side per category and shows the week odds', () => {
+  it('names the projected winner and shows both breakdowns', () => {
     render(<MatchupCard pair={pair()} names={NAMES} categories={CATS} userId="m01" />)
+    expect(screen.getByTestId('projected-winner')).toHaveTextContent('Aaron')
+    expect(screen.getByTestId('projected-winner')).toHaveTextContent('70%')
     expect(screen.getByTestId('cat-PTS')).toHaveClass('fav-a')
     expect(screen.getByTestId('cat-FT_PCT')).toHaveClass('fav-b')
+    // winner row then loser row, each with the team's own chance
+    expect(screen.getByTestId('cat-PTS-winner')).toHaveTextContent('80%')
+    expect(screen.getByTestId('cat-PTS-loser')).toHaveTextContent('20%')
+    expect(screen.getByTestId('cat-FT_PCT-winner')).toHaveTextContent('30%')
+    expect(screen.getByTestId('cat-FT_PCT-loser')).toHaveTextContent('70%')
     expect(screen.getByTestId('user-matchup')).toBeInTheDocument()
-    expect(screen.getByText('70%')).toBeInTheDocument()
-    expect(screen.getAllByText(/wins week/).length).toBe(2)
+    expect(screen.getByText(/Kurdi 20% · tie 10%/)).toBeInTheDocument()
     expect(screen.getByText(/avg categories 5\.2/)).toBeInTheDocument()
     expect(screen.getByText(/Porzingis/)).toBeInTheDocument()
   })
@@ -55,5 +61,12 @@ describe('MatchupCard', () => {
     render(<MatchupCard pair={pair({ home_manager_id: 'm02', away_manager_id: 'm01', odds: { ...pair().odds!, manager_a: 'm02', manager_b: 'm01' } })} names={NAMES} categories={CATS} userId="m01" />)
     expect(screen.getByTestId('user-matchup')).toBeInTheDocument()
     expect(screen.getByRole('heading').textContent).toMatch(/Kurdi.*vs.*Aaron/)
+  })
+
+  it('projects the away side as winner when its week odds are higher', () => {
+    const o = { ...pair().odds!, p_win_a: 0.2, p_win_b: 0.7 }
+    render(<MatchupCard pair={pair({ odds: o })} names={NAMES} categories={CATS} userId="m01" />)
+    expect(screen.getByTestId('projected-winner')).toHaveTextContent('Kurdi')
+    expect(screen.getByTestId('cat-PTS-winner')).toHaveTextContent('20%')
   })
 })

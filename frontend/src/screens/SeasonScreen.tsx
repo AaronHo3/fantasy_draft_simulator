@@ -4,18 +4,20 @@ import { FreeAgentsTab } from '../components/season/FreeAgentsTab'
 import { LinkDialog } from '../components/season/LinkDialog'
 import { MatchupsTab } from '../components/season/MatchupsTab'
 import { PowerTab } from '../components/season/PowerTab'
+import { PredictionsTab } from '../components/season/PredictionsTab'
 import { ResultsTab } from '../components/season/ResultsTab'
 import { SyncBar } from '../components/season/SyncBar'
 import { buildUrl } from '../lib/router'
 import { useDraftStore } from '../store/draftStore'
 import { useSeasonStore } from '../store/seasonStore'
 
-type Tab = 'matchups' | 'power' | 'free-agents' | 'results'
+type Tab = 'matchups' | 'power' | 'free-agents' | 'results' | 'predictions'
 const TABS: { id: Tab; label: string }[] = [
   { id: 'matchups', label: 'Matchups' },
   { id: 'power', label: 'Power rankings' },
   { id: 'free-agents', label: 'Free agents' },
   { id: 'results', label: 'Results' },
+  { id: 'predictions', label: 'Track record' },
 ]
 
 function tabFromHash(): Tab {
@@ -82,6 +84,7 @@ export function SeasonScreen() {
         {overview && tab === 'power' && <PowerTab />}
         {overview && tab === 'free-agents' && <FreeAgentsTab sessionId={sessionId} />}
         {overview && tab === 'results' && (linked ? <ResultsTab sessionId={sessionId} /> : <p className="muted">Link the league to see ESPN results.</p>)}
+        {overview && tab === 'predictions' && (linked ? <PredictionsTab sessionId={sessionId} userId={userId} /> : <p className="muted">Link the league to start the track record.</p>)}
       </section>
       <PlayerDrawer />
     </div>

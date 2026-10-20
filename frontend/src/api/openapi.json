@@ -1398,6 +1398,45 @@
      }
     }
    }
+  },
+  "/api/sessions/{session_id}/season/predictions": {
+   "get": {
+    "summary": "Season Predictions",
+    "operationId": "season_predictions_api_sessions__session_id__season_predictions_get",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PredictionsResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
   }
  },
  "components": {
@@ -3651,6 +3690,227 @@
      "per_game_sd"
     ],
     "title": "PlayerView"
+   },
+   "PredictionSummary": {
+    "properties": {
+     "n_predicted": {
+      "type": "integer",
+      "title": "N Predicted"
+     },
+     "n_decided": {
+      "type": "integer",
+      "title": "N Decided"
+     },
+     "n_correct": {
+      "type": "integer",
+      "title": "N Correct"
+     },
+     "hit_rate": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Hit Rate"
+     },
+     "brier": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Brier"
+     },
+     "by_period": {
+      "additionalProperties": {
+       "additionalProperties": {
+        "type": "integer"
+       },
+       "type": "object"
+      },
+      "type": "object",
+      "title": "By Period"
+     }
+    },
+    "type": "object",
+    "required": [
+     "n_predicted",
+     "n_decided",
+     "n_correct",
+     "hit_rate",
+     "brier",
+     "by_period"
+    ],
+    "title": "PredictionSummary"
+   },
+   "PredictionView": {
+    "properties": {
+     "period": {
+      "type": "integer",
+      "title": "Period"
+     },
+     "home_manager_id": {
+      "type": "string",
+      "title": "Home Manager Id"
+     },
+     "away_manager_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Away Manager Id"
+     },
+     "predicted_winner": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Predicted Winner"
+     },
+     "p_winner": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "P Winner"
+     },
+     "p_tie": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "P Tie"
+     },
+     "expected_home": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expected Home"
+     },
+     "expected_away": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expected Away"
+     },
+     "locked": {
+      "type": "boolean",
+      "title": "Locked"
+     },
+     "predicted_at": {
+      "type": "string",
+      "title": "Predicted At"
+     },
+     "actual_winner": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Actual Winner"
+     },
+     "actual_cats": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "type": "number"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Actual Cats"
+     },
+     "correct": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Correct"
+     }
+    },
+    "type": "object",
+    "required": [
+     "period",
+     "home_manager_id",
+     "away_manager_id",
+     "predicted_winner",
+     "p_winner",
+     "p_tie",
+     "expected_home",
+     "expected_away",
+     "locked",
+     "predicted_at",
+     "actual_winner",
+     "actual_cats",
+     "correct"
+    ],
+    "title": "PredictionView"
+   },
+   "PredictionsResponse": {
+    "properties": {
+     "ids": {
+      "$ref": "#/components/schemas/ResponseIds"
+     },
+     "predictions": {
+      "items": {
+       "$ref": "#/components/schemas/PredictionView"
+      },
+      "type": "array",
+      "title": "Predictions"
+     },
+     "summary": {
+      "$ref": "#/components/schemas/PredictionSummary"
+     }
+    },
+    "type": "object",
+    "required": [
+     "ids",
+     "predictions",
+     "summary"
+    ],
+    "title": "PredictionsResponse"
    },
    "PuntAdvisorRequest": {
     "properties": {

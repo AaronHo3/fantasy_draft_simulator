@@ -210,3 +210,11 @@ schedule is missing); players ESPN lists OUT or in an IR slot play zero games th
 keeps the projected availability. Power rankings use the season projection with IR players excluded
 from counted starters. The projection snapshot stays immutable; live status is an overlay written by
 sync. Measured on the real league: power rankings 0.27 s, one matchup 0.22 s (600 scenarios).
+
+## DEC-28 — 2026-10-19 — Weekly projections are logged and frozen for a season-end audit
+Every sync and overview writes the period's projected winner per pairing (P(win week), P(tie),
+expected categories) to `season_predictions`. Rows are rewritten until the matchup period's first
+day, then frozen exactly as last written, so roster moves after the fact cannot flatter the model.
+`GET /season/predictions` scores frozen rows against ESPN's decided winner (ESPN's `winner`, or
+category wins once the window has passed): hit rate and Brier score (0.25 = coin flip). A projected
+winner is the side with the higher P(win week), ties broken by expected categories.
