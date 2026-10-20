@@ -51,6 +51,9 @@ evaluate:
 research:
 	cd backend && uv run python -m app.cli research
 
+season:
+	cd backend && uv run python -m app.cli season $(SESSION) --out ../exports/season_week.xlsx
+
 build-snapshot:
 	cd backend && uv run python -m app.cli build-snapshot
 

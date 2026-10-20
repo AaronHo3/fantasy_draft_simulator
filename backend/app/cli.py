@@ -7,6 +7,8 @@ import json
 import sys
 from pathlib import Path
 
+import pandas as pd
+
 from app.settings import settings
 
 
@@ -132,6 +134,39 @@ def cmd_evaluate(ns: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_season(ns: argparse.Namespace) -> int:
+    """Actual weekly category standings for a session from live NBA game logs."""
+    from app.persistence.store import SessionStore
+    from app.projections.registry import SnapshotRegistry
+    from app.season.tracker import fetch_logs, standings_table, weekly_lines
+
+    store = SessionStore(settings.sessions_db)
+    state = store.state(ns.session_id)
+    meta = store.session_meta(ns.session_id)
+    store.close()
+    reg = SnapshotRegistry(settings.demo_dir, settings.snapshots_dir)
+    reg.load_all()
+    snap = reg.get(meta["snapshot_id"]) if meta and reg.has(meta["snapshot_id"]) else reg.get(reg.default_id())
+    logs = fetch_logs(state.league.season, ns.season_type)
+    nba_ids = {p.nba_id: r.manager_id for r in state.picks.values() for p in [snap.players[snap.index[r.player_id]]] if p.nba_id}
+    lines = weekly_lines(logs, nba_ids)
+    if lines.empty:
+        print(f"No {ns.season_type} games yet for {state.league.season}.")
+        return 0
+    weeks = sorted(lines["week"].unique())
+    week = ns.week or weeks[-1]
+    df, grid = standings_table(state, snap, lines, week)
+    print(f"{ns.season_type} week of {week} (weeks available: {', '.join(weeks)})")
+    print(df.to_string(index=False))
+    if ns.out:
+        with pd.ExcelWriter(ns.out, engine="openpyxl") as w:
+            df.to_excel(w, sheet_name=f"week {week}", index=False)
+            grid.to_excel(w, sheet_name="head-to-head")
+            lines[lines["week"] == week].merge(pd.DataFrame({"nba_id": list(nba_ids), "team": [state.league.manager(m).name for m in nba_ids.values()]}), on="nba_id").to_excel(w, sheet_name="player lines", index=False)
+        print("wrote", ns.out)
+    return 0
+
+
 def cmd_bench(ns: argparse.Namespace) -> int:
     from app.bench import run_benchmarks
 
@@ -173,6 +208,12 @@ def main(argv: list[str] | None = None) -> int:
     ev.add_argument("--user-model", help="alt_model drafts with this model spec, e.g. ridge, ens:rich, ens:rich:flat (opponents use the baseline)")
     ev.add_argument("--target", default="2025-26")
     ev.set_defaults(fn=cmd_evaluate)
+    se = sub.add_parser("season")
+    se.add_argument("session_id")
+    se.add_argument("--week", help="ISO Monday date; default latest")
+    se.add_argument("--season-type", default="Regular Season", choices=["Regular Season", "Pre Season", "Playoffs"])
+    se.add_argument("--out", help="write an .xlsx")
+    se.set_defaults(fn=cmd_season)
     bn = sub.add_parser("bench")
     bn.add_argument("--out")
     bn.set_defaults(fn=cmd_bench)

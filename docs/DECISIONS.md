@@ -162,3 +162,23 @@ Reading: over a draft's range the category win probability is close to linear in
 weekly category margins are noisy relative to a roster's total; discounting strong categories mostly
 makes the drafter pass on the best available player. Total value wins. Default is off; the option and
 the per-category marginal values remain available for inspection.
+
+## DEC-23 — 2026-10-13 — Rookie discount and returning-from-lost-season adjustment
+Preseason games are not ingested (bench-unit minutes, rested starters; low signal). Two groups the learned
+model cannot see are adjusted in the snapshot build instead:
+- **Rookies with no NBA history** (ESPN projection only): counting stats and minutes × 0.85, games capped at
+  65, cv 0.35, source `espn_rookie_discounted`. Judgment call, not validated (ESPN's past rookie projections
+  are not retrievable). Caleb Wilson moved from 29th to the mid-rounds, near his ADP.
+- **Players with history who played zero games last season**: 22 such returns 2017-2025 (≥ 1,000 minutes
+  the year before) produced a median 0.75× the baseline's projected per-game value, 0.85× minutes and 0.76×
+  games on return; stars (Durant, Murray, Leonard, Porziņģis, Zion) matched or beat the per-game projection
+  but still lost games, role players collapsed. Split by role in the last played season: stars (≥ 30 mpg, n=7: Durant, Wall, Bridges,
+  Murray, Porziņģis, Bey, Porter) returned to a median 100 % / mean 94 % of projected games (71 % reached 60+,
+  only Durant at 32 fell under 45) and 112 % of projected per-game value; role players (n=15) to 60 % of games
+  and 56 % of per-game value. Applied: stars games × 0.94, rates × 1.0; role players games × 0.62, rates × 0.75
+  (shrunk toward 1 for the small sample); uncertainty × 2 for both; source suffix `_returning`. Caveat: injury
+  type is not in the data; the two Achilles returns among stars (Durant 0.57, Wall 0.78) were the worst, so an
+  Achilles case like Haliburton may sit below the star average. The ridge/ensemble has no feature row for these players (they fall back to
+  the baseline + ESPN blend), which is why the adjustment lives in the build.
+Players with a short last season (Kessler 5 GP, Tatum 16 GP) need no special case: their games-played
+history already pulls the learned model's availability projection down (56 and 62 games).

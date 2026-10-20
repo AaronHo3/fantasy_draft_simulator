@@ -220,8 +220,13 @@ def rank_layer_a(ctx: RankingContext, current_overall: int | None = None) -> Lay
             flags.append(f"injury status {p.injury_status}")
         if p.is_rookie:
             flags.append("rookie: prior/projection only")
-        if snap.projection_source[i] in ("prior", "demo"):
-            flags.append(f"projection source: {snap.projection_source[i]}")
+        src_i = snap.projection_source[i]
+        if src_i in ("prior", "demo"):
+            flags.append(f"projection source: {src_i}")
+        if src_i.startswith("espn_rookie"):
+            flags.append("rookie: ESPN projection discounted, no NBA history")
+        if src_i.endswith("_returning"):
+            flags.append("missed all of last season: games and rates discounted")
         over_cap = primaries[i] in capped
         if over_cap:
             flags.append(f"would exceed the {primaries[i]} cap ({league.position_caps[primaries[i]]})")

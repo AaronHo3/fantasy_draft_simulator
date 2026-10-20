@@ -79,6 +79,16 @@ players in the middle, My roster / Categories / Strategy / Teams tabs on the rig
 (recent picks with "fix", the board, league profiles) at the bottom. On a phone, use the Find
 player / Best picks / My team switch.
 
+## Rookies and players returning from injury
+
+Preseason games are not used. A rookie with no NBA season carries ESPN's projection reduced by 15 %
+with games capped at 65 and a wide error bar, flagged "rookie: ESPN projection discounted". A player
+with NBA history who played zero games last season is flagged "missed all of last season" and carries a
+games discount: 6 % for players who were 30+ minute starters before the injury (they returned to a median
+100 % of projected games since 2017), 38 % plus a 25 % rate discount for role players (who returned to 60 %). Short
+seasons (a few games) need no flag: the model's games projection already reflects them. Use the risk
+setting (conservative) if you want these players pushed further down.
+
 ## Punting (H2H each category)
 
 Punting a category means conceding it every week on purpose so every pick serves the other eight.

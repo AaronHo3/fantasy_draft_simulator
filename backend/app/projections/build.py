@@ -16,6 +16,24 @@ from app.projections.baseline import BaselineConfig, project_baseline
 from app.projections.snapshot import Snapshot, content_hash, validate_snapshot
 
 ADP_PLACEHOLDER_MIN = 139.0  # ESPN reports ~139.9-140.4 for players without real draft data
+# Rookies with no NBA history and only an ESPN projection: ESPN's number is taken at face value by default,
+# which ranks some rookies like proven starters. Documented judgment (DEC-23): shrink counting stats and
+# minutes, cap games, and widen uncertainty. Not validated (ESPN's past rookie projections are unavailable).
+ROOKIE_DISCOUNT = 0.85
+ROOKIE_GP_CAP = 65.0
+ROOKIE_CV = 0.35
+# Players with NBA history who played zero games last season (season-long injury): 22 such returns in
+# 2017-2025 produced a median 0.75× of the baseline's projected per-game value, 0.85× minutes and 0.76×
+# games (DEC-23). The learned model cannot see them (no feature row), so the baseline/ESPN blend is
+# adjusted here and the uncertainty doubled.
+# Split by role in the last played season (DEC-23 follow-up): stars (>= 30 mpg, n=7) returned to a median
+# 100 % / mean 94 % of projected games and 112 % of projected per-game value; role players (n=15) to 60 %
+# of games and 56 % of per-game value (shrunk to 0.75 for the small sample).
+STAR_MPG = 30.0
+RETURN_GP_FACTOR_STAR = 0.94
+RETURN_RATE_FACTOR_STAR = 1.0
+RETURN_GP_FACTOR_ROLE = 0.62
+RETURN_RATE_FACTOR_ROLE = 0.75
 ESPN_ONLY_CV = 0.15
 PRIOR_CV = 0.35
 PRIOR_GAMES = 60.0
@@ -139,6 +157,10 @@ def build_real_snapshot(
     nba_active = players.set_index("nba_id")
     latest_age = totals.sort_values("season").groupby("nba_id")["age"].last()
     end_year = int(season[:4]) + 1
+    last_season = f"{end_year - 2}-{str(end_year - 1)[-2:]}"
+    played_last = set(totals[(totals["season"] == last_season) & (totals["season_type"] == "Regular Season")]["nba_id"].astype(int))
+    _rs = totals[totals["season_type"] == "Regular Season"].sort_values("season")
+    last_mpg = (_rs.groupby("nba_id").last().assign(mpg=lambda d: d["min"] / d["gp"].clip(lower=1))["mpg"])
 
     out_players: list[Player] = []
     pg_rows, sd_rows, adps, ranks, sources = [], [], [], [], []
@@ -196,14 +218,31 @@ def build_real_snapshot(
             else:
                 pg, sd, src = b_pg, b_sd, "baseline"
         elif es is not None:
-            pg, src = es, "espn"
-            sd = pg * ESPN_ONLY_CV
-            sd[PRIM_IDX["GP"]] = 12.0
+            pg, src = es.copy(), "espn"
+            if not has_hist:
+                # rookie discount: everything but GP scaled, GP capped, wide uncertainty
+                gp_col = PRIM_IDX["GP"]
+                gp_val = min(pg[gp_col], ROOKIE_GP_CAP)
+                pg = _coherent(pg * ROOKIE_DISCOUNT)
+                pg[gp_col] = gp_val
+                src = "espn_rookie_discounted"
+                counts["rookie_discounted"] = counts.get("rookie_discounted", 0) + 1
+            sd = pg * (ROOKIE_CV if src == "espn_rookie_discounted" else ESPN_ONLY_CV)
+            sd[PRIM_IDX["GP"]] = 15.0 if src == "espn_rookie_discounted" else 12.0
         else:
             pg, src = _prior_per_game(rank, prim, base.priors), "prior"
             sd = pg * PRIOR_CV
             sd[PRIM_IDX["GP"]] = 15.0
-        counts[src] += 1
+        if has_hist and nba_id not in played_last:
+            gp_col = PRIM_IDX["GP"]
+            star = float(last_mpg.get(nba_id, 0.0)) >= STAR_MPG
+            gp_val = pg[gp_col] * (RETURN_GP_FACTOR_STAR if star else RETURN_GP_FACTOR_ROLE)
+            pg = _coherent(pg * (RETURN_RATE_FACTOR_STAR if star else RETURN_RATE_FACTOR_ROLE))
+            pg[gp_col] = gp_val
+            sd = sd * 2.0
+            src = f"{src}_returning"
+            counts["returning_from_lost_season"] = counts.get("returning_from_lost_season", 0) + 1
+        counts[src] = counts.get(src, 0) + 1
         out_players.append(
             Player(
                 player_id=str(r.player_id),

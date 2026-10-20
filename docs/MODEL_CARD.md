@@ -49,9 +49,12 @@ Status: methodology defined; validation entries are filled in only when the expe
    (`build_real_snapshot(espn_weight=...)`); it is not validated because ESPN's 2026-27 projections
    cannot be scored before the season is played.
 
-Rookies/newly active players with no NBA history: `espn_projection` if present, otherwise a
-draft-slot prior (minutes and rates by expected draft position tier) with wide uncertainty and a
+Rookies/newly active players with no NBA history: `espn_projection` discounted (× 0.85, games ≤ 65,
+cv 0.35; DEC-23) if present, otherwise a draft-slot prior (minutes and rates by expected draft position tier) with wide uncertainty and a
 visible "prior only" label. College statistics are not used.
+
+Returning from a lost season (history, zero games last year): stars (30+ mpg before) games × 0.94 and
+rates unchanged; role players games × 0.62 and rates × 0.75; uncertainty × 2 for both, from the 22-player 2017-2025 return sample in DEC-23. Preseason statistics are not used.
 
 ## 3. Standardization and screening value (Layer A)
 

@@ -120,6 +120,16 @@ Tested category weights scaled by marginal win value given the roster; it hurt o
 holdout, so it ships off by default (`Strategy.roster_aware`). Plain value ranking remains the
 recommendation source.
 
+### 2026-10-13 — rookie and lost-season adjustments (DEC-23)
+Rookie ESPN projections discounted; players who missed all of last season get rate/games discounts from
+an empirical 22-player return sample; both surfaced as flags in the shortlist. Snapshot rebuilt, sessions
+repointed, backend restarted.
+
+### 2026-10-17 — draft night + in-season tracker
+Real draft recorded (session 5291db641583, 13 teams, 169 picks); league is 8 categories (no TOV), session
+updated. Draft review workbook/report in exports/. `make season SESSION=<id>` (app/season/tracker.py): actual
+weekly category standings from live NBA game logs, tested on preseason games; UI screen not built yet.
+
 ## How to resume
 Read CLAUDE.md, this file, DRAFT_COPILOT_PLAN.md and DECISIONS.md. `make install && make test`.
 Real data: `make refresh && make build-snapshot`. Ports 8000/5173 may be busy on this machine
