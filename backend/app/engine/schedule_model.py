@@ -94,6 +94,44 @@ def daily_counted_fraction(
     return np.where(games > 0, counted / np.maximum(games, 1), 1.0)
 
 
+def daily_counted_by_value(
+    roster_teams: list[str | None], values: list[float], n_starting: int, ts: TeamSchedule, week_idx: int
+) -> np.ndarray:
+    """Share of each player's game days on which an active manager starts him.
+
+    On a day when k rostered players have games and k > n_starting, the ``n_starting`` highest
+    ``values`` play and the rest sit (positions ignored: an approximation, labeled as such). A
+    player with no game that week counts 1.0 so the caller's games array decides.
+    """
+    n = len(roster_teams)
+    if n == 0:
+        return np.zeros(0)
+    plays = np.zeros((n, 7), dtype=bool)
+    for i, t in enumerate(roster_teams):
+        if t and t in ts.week_days and week_idx < len(ts.weeks):
+            for wd in ts.week_days[t][week_idx]:
+                plays[i, wd] = True
+    counted = np.zeros(n)
+    order = np.argsort(-np.asarray(values, dtype=float), kind="stable")
+    for day in range(7):
+        slots = n_starting
+        for i in order:
+            if plays[i, day] and slots > 0:
+                counted[i] += 1
+                slots -= 1
+    games = plays.sum(axis=1)
+    return np.where(games > 0, counted / np.maximum(games, 1), 1.0)
+
+
+def average_daily_counted_by_value(
+    roster_teams: list[str | None], values: list[float], n_starting: int, ts: TeamSchedule
+) -> np.ndarray:
+    idx = ts.full_week_indices()
+    if not idx:
+        return np.ones(len(roster_teams))
+    return np.mean([daily_counted_by_value(roster_teams, values, n_starting, ts, w) for w in idx], axis=0)
+
+
 def average_daily_counted_fraction(roster_teams: list[str | None], n_starting: int, ts: TeamSchedule) -> np.ndarray:
     idx = ts.full_week_indices()
     if not idx:

@@ -304,8 +304,12 @@ def test_daily_mode_counts_every_available_player_with_collision_weights(snap, s
     }
     me = sims["m01"]
     assert len(me.counted_idx) == 5 and me.weights is not None and len(me.weights) == 5
-    # five players with a game every day for three slots: each is counted 3/5 of the time
-    assert all(abs(w - 0.6) < 1e-9 for w in me.weights)
+    # five players with a game every day for three slots: an active manager starts the three best
+    # every day, so they are counted in full and the two weakest never play
+    assert sorted(me.weights) == [0.0, 0.0, 1.0, 1.0, 1.0]
+    values = {i: float(snap.per_game[i, PRIM_IDX["MIN"]]) for i in me.counted_idx}  # demo value tracks minutes
+    starters = {i for i, w in zip(me.counted_idx, me.weights, strict=True) if w == 1.0}
+    assert starters == set(sorted(me.counted_idx, key=lambda i: -values[i])[:3])
     weekly = {t.manager_id: t for t in build_team_sims(snap, state, frozenset())}
     assert weekly["m01"].weights is None and len(weekly["m01"].counted_idx) == 3
 
@@ -330,7 +334,7 @@ def test_unavailable_player_never_starts_in_either_mode(snap, state):
         )
     }
     assert snap.index[star] not in daily["m01"].counted_idx and len(daily["m01"].counted_idx) == 4
-    assert all(abs(w - 0.75) < 1e-9 for w in daily["m01"].weights)  # four left for three slots
+    assert sorted(daily["m01"].weights) == [0.0, 1.0, 1.0, 1.0]  # four left for three slots: the worst sits
 
 
 def test_matchup_odds_daily_uses_bench_and_benches_no_team_player(snap, state):
@@ -376,3 +380,36 @@ def test_free_agents_best_drop_is_the_player_without_a_team(snap, state):
     status[star] = {"injury_status": "NO_TEAM", "percent_owned": None, "fetched_at": None}
     fas = free_agents(snap, state, status, ir_player_ids=frozenset(), limit=3)
     assert all(f.best_drop == star for f in fas)
+
+
+def test_daily_weights_split_days_by_schedule(snap, state):
+    """A weak player still counts on days when the better players are off."""
+    from app.engine.schedule_model import build_team_schedule
+
+    roster = state.current_roster("m01")
+    idx = [snap.index[p] for p in roster]
+    by_min = sorted(idx, key=lambda i: -snap.per_game[i, PRIM_IDX["MIN"]])
+    worst = snap.players[by_min[-1]].team
+    rows = []
+    gid = 1
+    for day in ("19", "20", "21", "22"):
+        for i in by_min[:4]:  # the four best play Mon-Thu
+            rows.append(
+                {
+                    "game_id": gid,
+                    "date_utc": f"2026-10-{day}T23:00:00+00:00",
+                    "home_team": snap.players[i].team,
+                    "away_team": "ZZZ",
+                }
+            )
+            gid += 1
+    rows.append(
+        {"game_id": gid, "date_utc": "2026-10-23T23:00:00+00:00", "home_team": worst, "away_team": "ZZZ"}
+    )  # worst plays Friday alone
+    ts = build_team_schedule(pd.DataFrame(rows))
+    sims = {
+        t.manager_id: t for t in build_team_sims(snap, daily_state(state), frozenset(), team_schedule=ts, week_idx=0)
+    }
+    w = dict(zip(sims["m01"].counted_idx, sims["m01"].weights, strict=True))
+    assert w[by_min[-1]] == 1.0  # his only game day has free slots
+    assert w[by_min[3]] == 0.0  # fourth-best is squeezed out every day by the top three

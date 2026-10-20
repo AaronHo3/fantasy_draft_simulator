@@ -21,9 +21,9 @@ from app.engine.categories import PRIM_IDX
 from app.engine.layer_a import standardized
 from app.engine.schedule_model import (
     TeamSchedule,
-    average_daily_counted_fraction,
+    average_daily_counted_by_value,
     build_team_schedule,
-    daily_counted_fraction,
+    daily_counted_by_value,
     games_per_week_for_players,
 )
 from app.engine.simulation import (
@@ -92,12 +92,15 @@ def build_team_sims(
     """Who counts for each team. IR and ``unavailable`` (OUT / no team) players never start.
 
     Weekly lineups: the top ``n_starting`` available players by projected minutes. Daily lineups
-    (with a schedule): every available player, weighted by the share of their games that fit the
-    daily slots (``schedule_model.daily_counted_fraction``); without a schedule, weekly rules apply.
+    (with a schedule): every available player, weighted by the share of his game days on which he
+    is among the ``n_starting`` most valuable teammates with a game (an active manager starts the
+    best players each day; ``schedule_model.daily_counted_by_value``). Without a schedule, weekly
+    rules apply.
     """
     n_start = len(state.league.starting_slots)
     minutes = snap.per_game[:, PRIM_IDX["MIN"]]
     daily = state.league.lineup_mode == LineupMode.daily and team_schedule is not None
+    value = standardized(snap, state.league).z_per_game.sum(axis=1) if daily else None  # per-game value, all categories
     out = []
     for mid, roster in state.current_rosters().items():
         idx = [snap.index[p] for p in roster if p in snap.index]
@@ -108,10 +111,11 @@ def build_team_sims(
         ]
         if daily:
             teams = [snap.players[i].team for i in eligible]
+            vals = [float(value[i]) for i in eligible]
             if week_idx is not None:
-                w = daily_counted_fraction(teams, n_start, team_schedule, week_idx)
+                w = daily_counted_by_value(teams, vals, n_start, team_schedule, week_idx)
             else:
-                w = average_daily_counted_fraction(teams, n_start, team_schedule)
+                w = average_daily_counted_by_value(teams, vals, n_start, team_schedule)
             out.append(TeamSim(mid, tuple(idx), tuple(eligible), n_ir, n_unknown, tuple(float(x) for x in w)))
         else:
             counted = sorted(eligible, key=lambda i: -minutes[i])[:n_start]
