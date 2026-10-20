@@ -68,6 +68,11 @@ test('link to ESPN (mocked), sync, matchups, power rankings, free agents, result
   await page.route('**/api/sessions/*/season/overview*', async (route) => {
     const real = await route.fetch()
     const body = await real.json()
+    if (!real.ok() || !body.league_categories) {
+      console.log('overview passthrough', real.status(), JSON.stringify(body).slice(0, 300))
+      await route.fulfill({ response: real })
+      return
+    }
     const opponent = managers.find((m) => m.id !== userId)!
     const odds = (a: string, b: string) => ({
       period: 1, manager_a: a, manager_b: b, expected_a: 5.1, expected_b: 2.9, p_win_a: 0.7, p_tie: 0.1, p_win_b: 0.2,
