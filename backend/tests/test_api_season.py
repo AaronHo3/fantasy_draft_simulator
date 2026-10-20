@@ -7,6 +7,7 @@ from dataclasses import replace
 import pandas as pd
 import pytest
 
+from app.draft.events import EventType
 from app.sources.espn_league import (
     EspnLeague,
     EspnMatchup,
@@ -309,7 +310,7 @@ def test_sync_private_league_409(client, complete_session):
     install_fakes(client, LeagueAccessError("private"))
     r = client.post(f"/api/sessions/{sid}/espn/sync", json={})
     assert r.status_code == 409 and r.json()["code"] == "league_private"
-    assert "Viewable to Public" in r.json()["message"]
+    assert "Viewable to Public" in r.json()["message"] and "cookie" not in r.json()["message"].lower()
 
 
 def test_sync_applies_roster_changes_and_is_idempotent(client, complete_session, tmp_path):
@@ -600,3 +601,67 @@ def test_cli_link_and_sync(client, complete_session, monkeypatch, capsys):
     assert cli.main(["season", sid]) == 0
     out = capsys.readouterr().out
     assert "period 1" in out and "m01" in out or "Team 1" in out
+
+
+def test_sync_race_is_rejected_not_double_applied(client, complete_session):
+    """A plan built from one state must not be applied over a state that moved on (auto-refresh vs manual)."""
+    sid = complete_session
+    install_fakes(client, league_from_state(client, sid))
+    link(client, sid)
+    st = client.get(f"/api/sessions/{sid}/state").json()
+    victim = st["current_rosters"]["m03"][0]
+    league = league_from_state(
+        client, sid, fetched_at="2026-10-19T07:00:00+00:00", add=("m03", demo(600)), drop=("m03", victim)
+    )
+    ctx = client.app.state.ctx
+    calls = {"n": 0}
+
+    def racing_fetch(league_id, season_id):
+        calls["n"] += 1
+        if calls["n"] == 1:  # another sync lands while this one is talking to ESPN
+            ctx.store.append(
+                sid,
+                EventType.roster_changed,
+                {
+                    "moves": [
+                        {"manager_id": "m03", "added": [demo(600)], "dropped": [victim], "source_ref": "espn:other"}
+                    ]
+                },
+                source="espn",
+            )
+        return league, raw_from_league(league)
+
+    ctx.espn_fetch_league = racing_fetch
+    r = client.post(f"/api/sessions/{sid}/espn/sync", json={})
+    assert r.status_code == 409 and r.json()["code"] == "revision_conflict"
+    after = client.get(f"/api/sessions/{sid}/state").json()
+    assert after["current_rosters"]["m03"].count(demo(600)) == 1
+    # the retry sees the already-applied state: nothing to do
+    r2 = client.post(f"/api/sessions/{sid}/espn/sync", json={})
+    assert r2.status_code == 200 and r2.json()["changes"] == []
+
+
+def test_overview_movement_survives_a_no_change_sync(client, complete_session):
+    sid = complete_session
+    linked_and_synced(client, sid, week1())
+    st = client.get(f"/api/sessions/{sid}/state").json()
+    weakest = client.get(f"/api/sessions/{sid}/season/overview").json()["power"][-1]["manager_id"]
+    fa = client.get(f"/api/sessions/{sid}/season/free-agents", params={"limit": 1}).json()["items"][0]["player"][
+        "player_id"
+    ]
+    install_fakes(
+        client,
+        league_from_state(
+            client,
+            sid,
+            fetched_at="2026-10-20T04:00:00+00:00",
+            add=(weakest, fa),
+            drop=(weakest, st["current_rosters"][weakest][-1]),
+            matchups=week1(),
+        ),
+    )
+    assert client.post(f"/api/sessions/{sid}/espn/sync", json={}).status_code == 200
+    moved = client.get(f"/api/sessions/{sid}/season/overview").json()["movement"]
+    install_fakes(client, league_from_state(client, sid, fetched_at="2026-10-20T05:00:00+00:00", matchups=week1()))
+    assert client.post(f"/api/sessions/{sid}/espn/sync", json={}).status_code == 200
+    assert client.get(f"/api/sessions/{sid}/season/overview").json()["movement"] == moved

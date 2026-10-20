@@ -26,7 +26,7 @@ from app.season.live_status import status_overlay, write_live_status
 from app.season.power import matchup_odds, power_rankings
 from app.season.results import week_results
 from app.season.sync import SyncPlan, plan_sync
-from app.season.weeks import current_period
+from app.season.weeks import calendar_matches_espn, current_period
 from app.sources.base import FetchError, SchemaError
 from app.sources.espn_league import EspnLeague, LeagueAccessError, parse_league, settings_diff
 
@@ -34,7 +34,7 @@ log = logging.getLogger(__name__)
 
 PRIVATE_HELP = (
     "ESPN league {league_id} is private. In ESPN: League > Settings > Basic Settings > "
-    "Make League Viewable to Public (or add cookies to backend/.env)."
+    "Make League Viewable to Public, then sync again."
 )
 
 
@@ -188,6 +188,19 @@ def _apply_plan(ctx: AppContext, session_id: str, plan: SyncPlan, expected: int 
         raise SeasonError(422, e.code, e.message, **e.detail) from e
 
 
+def _calendar_warning(season: str, league: EspnLeague, warnings: list[str]) -> None:
+    final = league.settings.final_scoring_period
+    try:
+        ok = final == 0 or calendar_matches_espn(season, final)
+    except ValueError:
+        ok = False
+    if not ok:
+        warnings.append(
+            f"ESPN's season ends on scoring period {final} but the app's week calendar does not; "
+            "matchup-week game counts may be off (see app/season/weeks.py)"
+        )
+
+
 def _power_rows(ctx: AppContext, snap, state: DraftState, league: EspnLeague | None) -> list[dict[str, Any]]:
     return [p.__dict__ for p in power_rankings(snap, state, ctx.settings.default_seed, _ir_ids(league, snap))]
 
@@ -202,10 +215,14 @@ def run_sync(ctx: AppContext, session_id: str, expected_revision: int | None) ->
     league = fetch_league(ctx, league_id, state.league.season)
     snap = _snapshot(ctx, meta)
     plan = plan_sync(state, league, snap, state.league.espn_team_ids)
-    new_state = _apply_plan(ctx, session_id, plan, expected_revision)
+    # The plan was built from ``state``; apply it only over that exact revision so a sync that
+    # landed while we were talking to ESPN (auto-refresh vs. manual, CLI vs. UI) is rejected.
+    new_state = _apply_plan(ctx, session_id, plan, state.last_seq)
     warnings = list(plan.warnings) + settings_diff(league.settings, state.league)
+    _calendar_warning(state.league.season, league, warnings)
     _refresh_players(ctx, league_id, state.league.season, warnings)
     previous = ctx.store.get_sync(session_id) or {}
+    roster_changed = any(t == EventType.roster_changed for t, _, _ in plan.events)
     ctx.store.set_sync(
         session_id,
         {
@@ -224,7 +241,8 @@ def run_sync(ctx: AppContext, session_id: str, expected_revision: int | None) ->
                 for d in plan.diffs
             ],
             "power": _power_rows(ctx, snap, new_state, league),
-            "previous_power": previous.get("power"),
+            # movement arrows compare with the table from the last sync that changed a roster
+            "previous_power": previous.get("power") if roster_changed else previous.get("previous_power"),
             "current_period": league.settings.current_matchup_period or None,
         },
     )

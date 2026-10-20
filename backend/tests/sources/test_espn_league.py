@@ -93,3 +93,10 @@ def test_settings_diff_flags_daily_vs_weekly(league):
     assert not any("categor" in ln for ln in lines)
     daily = cfg.model_copy(update={"lineup_mode": LineupMode.daily})
     assert settings_diff(league.settings, daily) == []
+
+
+def test_parse_final_scoring_period_matches_calendar(league):
+    from app.season.weeks import calendar_matches_espn
+
+    assert league.settings.final_scoring_period == 160
+    assert calendar_matches_espn("2026-27", league.settings.final_scoring_period)

@@ -99,6 +99,49 @@ describe('season store', () => {
     expect(createSeasonStore({ api, storage, reloadSession: async () => {} }).getState().autoRefreshMin).toBe(60)
   })
 
+  it('a stored auto-refresh setting is armed again when the screen loads after a reload', async () => {
+    let syncs = 0
+    const storage = memoryStorage()
+    storage.set(AUTO_REFRESH_KEY, '15')
+    const api = fakeApi({
+      seasonOverview: () => Promise.resolve(makeOverview()),
+      espnSync: () => {
+        syncs += 1
+        return Promise.resolve(makeSync())
+      },
+    })
+    const store = createSeasonStore({ api, storage, reloadSession: async () => {} })
+    expect(store.getState().autoRefreshMin).toBe(15)
+    await store.getState().loadOverview('sess')
+    store.getState().start()
+    await vi.advanceTimersByTimeAsync(15 * 60_000)
+    expect(syncs).toBe(1)
+    store.getState().stop()
+    await vi.advanceTimersByTimeAsync(15 * 60_000)
+    expect(syncs).toBe(1)
+    store.getState().start()
+    await vi.advanceTimersByTimeAsync(15 * 60_000)
+    expect(syncs).toBe(2)
+  })
+
+  it('a revision conflict (another sync landed first) reloads quietly instead of showing an error', async () => {
+    let overviewCalls = 0
+    const api = fakeApi({
+      seasonOverview: () => {
+        overviewCalls += 1
+        return Promise.resolve(makeOverview())
+      },
+      espnSync: () => Promise.reject(new ApiError(409, 'revision_conflict', 'stale revision')),
+    })
+    const store = createSeasonStore({ api, storage: memoryStorage(), reloadSession: async () => {} })
+    await store.getState().loadOverview('sess')
+    const ok = await store.getState().sync('sess', 3)
+    expect(ok).toBe(true)
+    expect(store.getState().syncStatus).toBe('idle')
+    expect(store.getState().syncError).toBeNull()
+    expect(overviewCalls).toBe(2)
+  })
+
   it('a failed sync keeps the previous overview and reports the server message', async () => {
     const api = fakeApi({
       seasonOverview: () => Promise.resolve(makeOverview()),

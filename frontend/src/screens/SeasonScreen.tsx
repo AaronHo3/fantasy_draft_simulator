@@ -31,13 +31,17 @@ export function SeasonScreen() {
   const overviewStatus = useSeasonStore((s) => s.overviewStatus)
   const overviewError = useSeasonStore((s) => s.overviewError)
   const loadOverview = useSeasonStore((s) => s.loadOverview)
+  const start = useSeasonStore((s) => s.start)
   const stop = useSeasonStore((s) => s.stop)
   const [tab, setTab] = useState<Tab>(tabFromHash)
 
   useEffect(() => {
-    if (sessionId) void loadOverview(sessionId)
+    if (sessionId) {
+      void loadOverview(sessionId)
+      start() // re-arm a remembered auto-refresh setting while the screen is open
+    }
     return () => stop()
-  }, [sessionId, loadOverview, stop])
+  }, [sessionId, loadOverview, start, stop])
 
   if (!sessionId || !state) {
     return (

@@ -93,9 +93,13 @@ was inspected. Anything else is marked planned or unverified.
 - Sync also refreshes `/players?view=kona_player_info` (above) for live injury status and
   percent owned; written to `data/nba/live/<league_id>/players.parquet` (gitignored). The raw league
   payload is cached at `data/nba/live/<league_id>/league.json` so results survive a restart.
-- Matchup periods are Monday-anchored weeks; period 1 = 2026-10-20..2026-10-25
-  (`backend/app/season/weeks.py`). ESPN's `matchupPeriods` map returned singletons, so the
-  calendar is derived, not read; verify against ESPN once week-1 scores post.
+- Matchup periods are Monday-anchored weeks; period 1 = 2026-10-20..2026-10-25 and period 18 is
+  doubled for the All-Star break (2027-02-15..02-28), which makes the 22-period calendar end on
+  ESPN's `status.finalScoringPeriod` 160 = 2027-03-28 (`backend/app/season/weeks.py`,
+  `calendar_matches_espn`; sync warns if ESPN's final period ever disagrees). ESPN's
+  `matchupPeriods` map returned singletons, so the calendar is derived, not read. The schedule
+  parquet also has no games from Dec 3 to Dec 12 (NBA Cup knockout games are not scheduled yet),
+  so period 8 game counts will be low until `make refresh` after the Cup bracket is set.
 
 ## espn_api (community client, `espn_api==1.0.1`)
 

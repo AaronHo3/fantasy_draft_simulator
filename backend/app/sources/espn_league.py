@@ -44,6 +44,7 @@ class EspnSettings:
     playoff_team_count: int
     current_matchup_period: int
     scoring_period_id: int
+    final_scoring_period: int = 0  # days from opening night; 0 when absent
 
 
 @dataclass(frozen=True)
@@ -167,6 +168,7 @@ def _parse_settings(payload: dict[str, Any]) -> EspnSettings:
         playoff_team_count=int(sched.get("playoffTeamCount", 0)),
         current_matchup_period=int(status.get("currentMatchupPeriod", 0)),
         scoring_period_id=int(payload.get("scoringPeriodId", 0)),
+        final_scoring_period=int(status.get("finalScoringPeriod", 0) or 0),
     )
 
 

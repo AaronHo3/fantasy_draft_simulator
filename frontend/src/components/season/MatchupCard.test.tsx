@@ -46,7 +46,8 @@ describe('MatchupCard', () => {
     expect(screen.getByTestId('cat-FT_PCT')).toHaveClass('fav-b')
     expect(screen.getByTestId('user-matchup')).toBeInTheDocument()
     expect(screen.getByText('70%')).toBeInTheDocument()
-    expect(screen.getByText(/5\.2/)).toBeInTheDocument()
+    expect(screen.getAllByText(/wins week/).length).toBe(2)
+    expect(screen.getByText(/avg categories 5\.2/)).toBeInTheDocument()
     expect(screen.getByText(/Porzingis/)).toBeInTheDocument()
   })
 

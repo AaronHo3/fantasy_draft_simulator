@@ -35,18 +35,18 @@ export function MatchupCard({ pair, names, categories, userId, compact = false }
         {pair.away_manager_id === userId ? ' (you)' : ''}
       </h3>
       <div className="odds-row" aria-label="Week odds">
-        <span className="odds win" title={`${home} wins the week`}>
-          <b>{fmtPct(o.p_win_a)}</b> {home}
+        <span className="odds win" title={`${home} takes more than half the categories`}>
+          <b>{fmtPct(o.p_win_a)}</b> {home} wins week
         </span>
-        <span className="odds tie">
+        <span className="odds tie" title="exactly half the categories each">
           <b>{fmtPct(o.p_tie)}</b> tie
         </span>
-        <span className="odds loss" title={`${away} wins the week`}>
-          <b>{fmtPct(o.p_win_b)}</b> {away}
+        <span className="odds loss" title={`${away} takes more than half the categories`}>
+          <b>{fmtPct(o.p_win_b)}</b> {away} wins week
         </span>
         <span className="spacer" />
-        <span className="muted">
-          expected {fmtNum(o.expected_a, 1)} – {fmtNum(o.expected_b, 1)} cats · likeliest {fmtNum(o.modal_score[0], 0)}–{fmtNum(o.modal_score[1], 0)}
+        <span className="muted" title="mean categories won over all simulated weeks, not the score of any one week">
+          avg categories {fmtNum(o.expected_a, 1)} – {fmtNum(o.expected_b, 1)} · most common score {fmtNum(o.modal_score[0], 0)}–{fmtNum(o.modal_score[1], 0)}
           {o.games_a || o.games_b ? ` · games ${o.games_a}/${o.games_b}` : ''}
         </span>
       </div>

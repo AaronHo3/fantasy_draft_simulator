@@ -1,7 +1,7 @@
 // Season screen state: ESPN sync, overview (power + matchups), free agents and results.
 // Sync is the only action that reaches ESPN; everything else reads the backend's stored state.
 import { create } from 'zustand'
-import { api as defaultApi, type ApiClient } from '../api/client'
+import { ApiError, api as defaultApi, type ApiClient } from '../api/client'
 import type { FreeAgentsResponse, SeasonOverview, SyncResult, WeekResultsResponse } from '../api/types'
 import { browserStorage, type KeyValueStorage } from '../lib/storage'
 import { useDraftStore } from './draftStore'
@@ -46,6 +46,7 @@ export interface SeasonStore {
   loadResults(sessionId: string, period: number): Promise<void>
   setPeriod(period: number | null): void
   setAutoRefresh(minutes: AutoRefreshMinutes): void
+  start(): void
   stop(): void
 }
 
@@ -124,6 +125,13 @@ export function createSeasonStore(overrides: Partial<SeasonDeps> = {}) {
           await get().loadOverview(sessionId)
           return true
         } catch (e) {
+          if (e instanceof ApiError && e.code === 'revision_conflict') {
+            // another sync (other tab, CLI, auto-refresh) landed first: its result is already stored
+            set({ syncStatus: 'idle', syncError: null })
+            await deps.reloadSession(sessionId)
+            await get().loadOverview(sessionId)
+            return true
+          }
           set({ syncStatus: 'error', syncError: errorText(e) })
           return false
         }
@@ -156,6 +164,10 @@ export function createSeasonStore(overrides: Partial<SeasonDeps> = {}) {
       setAutoRefresh(minutes) {
         storage.set(AUTO_REFRESH_KEY, String(minutes))
         set({ autoRefreshMin: minutes })
+        armTimer()
+      },
+
+      start() {
         armTimer()
       },
 
