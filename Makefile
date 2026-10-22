@@ -61,6 +61,9 @@ link:
 sync:
 	cd backend && uv run python -m app.cli espn-sync $(SESSION)
 
+performance:
+	cd backend && uv run python -m app.cli performance $(SESSION)
+
 build-snapshot:
 	cd backend && uv run python -m app.cli build-snapshot
 

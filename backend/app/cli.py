@@ -10,7 +10,7 @@ from pathlib import Path
 import pandas as pd
 
 from app.api.deps import build_context
-from app.settings import settings
+from app.settings import REPO_DIR, settings
 
 
 def cmd_demo(_: argparse.Namespace) -> int:
@@ -273,6 +273,88 @@ def _print_espn_week(ctx, session_id: str, period: int | None) -> int:
     return 0
 
 
+def cmd_performance(ns: argparse.Namespace) -> int:
+    """Actual vs projected lines for the user's roster this period (appends the CSV tracker) and the hottest free agents."""
+    from app.season.live_status import status_overlay
+    from app.season.performance import append_tracker, free_agent_hot_starts, performance_table
+    from app.season.tracker import fetch_logs
+    from app.season.weeks import current_period, period_window
+
+    ctx = build_context(settings)
+    state = ctx.store.state(ns.session_id)
+    meta = ctx.store.session_meta(ns.session_id)
+    snap = (
+        ctx.registry.get(meta["snapshot_id"])
+        if meta and ctx.registry.has(meta["snapshot_id"])
+        else ctx.registry.get(ctx.registry.default_id())
+    )
+    from datetime import UTC, datetime, timedelta
+
+    today = (datetime.now(UTC) - timedelta(hours=6)).date()
+    period = ns.period or current_period(state.league.season, today)
+    window = period_window(state.league.season, period)
+    logs = fetch_logs(state.league.season, "Regular Season")
+    uid = ns.manager or state.league.user_manager_id
+    table = performance_table(snap, state, logs, period, uid, window)
+    out_dir = Path(ns.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    csv_path = out_dir / f"performance_{ns.session_id}.csv"
+    history = append_tracker(csv_path, table)
+    status = status_overlay(snap, ctx.live_status(state.league.espn_league_id) if state.league.espn_league_id else None)
+    hot = free_agent_hot_starts(snap, state, logs, status, window, limit=ns.limit)
+    xlsx = out_dir / f"performance_{ns.session_id}.xlsx"
+    with pd.ExcelWriter(xlsx, engine="openpyxl") as w:
+        table.to_excel(w, sheet_name=f"week {period} roster", index=False)
+        hot.to_excel(w, sheet_name=f"week {period} free agents", index=False)
+        history.to_excel(w, sheet_name="tracker (all weeks)", index=False)
+        piv = history.pivot_table(index="player", columns="period", values="value_delta", aggfunc="first")
+        piv.to_excel(w, sheet_name="value delta by week")
+    print(f"period {period} ({window[0]}..{window[1]}), {len(logs)} game logs; wrote {csv_path} and {xlsx}")
+    show = [
+        "player",
+        "games",
+        "min_actual",
+        "min_proj",
+        "pts_actual",
+        "pts_proj",
+        "reb_actual",
+        "reb_proj",
+        "ast_actual",
+        "ast_proj",
+        "value_actual",
+        "value_proj",
+        "value_delta",
+    ]
+    print(table[show].sort_values("value_delta", ascending=False).round(2).to_string(index=False))
+    if not hot.empty:
+        print("\nhottest free agents (actual per game so far vs projection):")
+        print(
+            hot[
+                [
+                    "player",
+                    "team",
+                    "pos",
+                    "status",
+                    "owned_pct",
+                    "games",
+                    "min_actual",
+                    "min_proj",
+                    "pts_actual",
+                    "reb_actual",
+                    "ast_actual",
+                    "stl_actual",
+                    "blk_actual",
+                    "fg3m_actual",
+                    "value_actual",
+                    "value_proj",
+                ]
+            ]
+            .round(2)
+            .to_string(index=False)
+        )
+    return 0
+
+
 def cmd_bench(ns: argparse.Namespace) -> int:
     from app.bench import run_benchmarks
 
@@ -333,6 +415,13 @@ def main(argv: list[str] | None = None) -> int:
     es = sub.add_parser("espn-sync")
     es.add_argument("session_id")
     es.set_defaults(fn=cmd_espn_sync)
+    pf = sub.add_parser("performance")
+    pf.add_argument("session_id")
+    pf.add_argument("--period", type=int)
+    pf.add_argument("--manager")
+    pf.add_argument("--limit", type=int, default=30)
+    pf.add_argument("--out-dir", default=str(REPO_DIR / "exports"))
+    pf.set_defaults(fn=cmd_performance)
     bn = sub.add_parser("bench")
     bn.add_argument("--out")
     bn.set_defaults(fn=cmd_bench)
