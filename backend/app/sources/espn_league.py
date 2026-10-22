@@ -20,7 +20,9 @@ from app.sources.espn_public import ESPN_BASE, ESPN_TIMEOUT_S, USER_AGENT
 
 log = logging.getLogger(__name__)
 
-LEAGUE_VIEWS = ("mTeam", "mRoster", "mSettings", "mMatchup", "mTransactions2", "mStatus")  # mSchedule would replace mMatchup's scored schedule with an unscored one
+# mMatchup carries the scored schedule (mSchedule would replace it with an unscored copy);
+# mMatchupScore adds cumulativeScoreLive, the live scoreboard ESPN's site shows.
+LEAGUE_VIEWS = ("mTeam", "mRoster", "mSettings", "mMatchup", "mMatchupScore", "mTransactions2", "mStatus")
 ROSTER_MOVE_KINDS = frozenset({"ADD", "DROP", "TRADE"})
 IR_SLOT_ID = 13
 CENTER_POSITION_ID = 5
@@ -93,6 +95,8 @@ class EspnStatLine:
 class EspnMatchupSide:
     team_id: int
     by_stat: dict[int, EspnStatLine]
+    record: tuple[int, int, int] = (0, 0, 0)  # category wins, losses, ties so far
+    is_live: bool = False  # True when taken from cumulativeScoreLive (what ESPN's site shows)
 
 
 @dataclass(frozen=True)
@@ -218,10 +222,14 @@ def _parse_team(t: dict[str, Any], owners: dict[str, str]) -> EspnTeam:
 def _parse_side(s: dict[str, Any] | None) -> EspnMatchupSide | None:
     if not s or s.get("teamId") is None:
         return None
+    live = s.get("cumulativeScoreLive") or {}
+    is_live = bool(live.get("scoreByStat"))
+    cs = live if is_live else (s.get("cumulativeScore") or {})
     by_stat = {}
-    for sid, line in (s.get("cumulativeScore") or {}).get("scoreByStat", {}).items():
+    for sid, line in (cs.get("scoreByStat") or {}).items():
         by_stat[int(sid)] = EspnStatLine(score=float(line.get("score") or 0.0), result=line.get("result"))
-    return EspnMatchupSide(team_id=int(s["teamId"]), by_stat=by_stat)
+    record = (int(cs.get("wins") or 0), int(cs.get("losses") or 0), int(cs.get("ties") or 0))
+    return EspnMatchupSide(team_id=int(s["teamId"]), by_stat=by_stat, record=record, is_live=is_live)
 
 
 def _parse_matchup(m: dict[str, Any]) -> EspnMatchup:

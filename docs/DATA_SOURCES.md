@@ -90,7 +90,10 @@ was inspected. Anything else is marked planned or unverified.
   type ADD / DROP / LINEUP / DRAFT / TRADE, playerId, fromTeamId, toTeamId, `proposedDate` ms).
 - Live weekly category scores (`schedule[].home/away.cumulativeScore.scoreByStat`) come from the
   `mMatchup` view; requesting `mSchedule` alongside it replaces that schedule with an unscored copy, so
-  `mSchedule` is not requested (verified 2026-10-21 after the first games).
+  `mSchedule` is not requested (verified 2026-10-21 after the first games). `cumulativeScore` lags
+  the site by hours; the `mMatchupScore` view adds `cumulativeScoreLive` (wins/losses/ties and
+  `scoreByStat`), which is what ESPN's matchup page shows, and the parser prefers it when present
+  (verified 2026-10-21: cumulativeScore said 7-1-0 while the site and cumulativeScoreLive said 6-2-0).
 - The default `mRoster` view is the roster as it stood when the current scoring period (day)
   opened: an add/drop executed today appears only under `?view=mRoster&scoringPeriodId=<current+1>`
   (verified 2026-10-20 with an executed FREEAGENT transaction missing from the default view). The

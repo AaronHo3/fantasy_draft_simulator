@@ -8,6 +8,7 @@ import pytest
 
 from app.league.config import LineupMode, demo_league_config
 from app.sources.espn_league import (
+    LEAGUE_VIEWS,
     LeagueAccessError,
     fetch_league_raw,
     league_url,
@@ -153,3 +154,47 @@ def test_fetch_keeps_default_roster_when_next_period_view_fails(monkeypatch):
     monkeypatch.setattr(httpx.Client, "get", fake_get)
     league = parse_league(fetch_league_raw(2075231076, 2027).payload, 2075231076, 2027, "now")
     assert "Tyrese Maxey" in {e.name for e in league.team(1).roster}
+
+
+def test_parse_prefers_live_cumulative_score_when_present():
+    """ESPN's cumulativeScore lags; cumulativeScoreLive (mMatchupScore view) is what the site shows."""
+    base = json.loads(FIXTURE.read_text())
+    m = next(m for m in base["schedule"] if m["matchupPeriodId"] == 1 and m.get("away"))
+    m["home"]["cumulativeScore"] = {
+        "wins": 7,
+        "losses": 1,
+        "ties": 0,
+        "scoreByStat": {"0": {"score": 68.0, "result": "WIN"}, "6": {"score": 26.0, "result": "WIN"}},
+    }
+    m["home"]["cumulativeScoreLive"] = {
+        "wins": 6,
+        "losses": 2,
+        "ties": 0,
+        "scoreByStat": {"0": {"score": 186.0, "result": "WIN"}, "6": {"score": 66.0, "result": "LOSS"}},
+    }
+    m["away"]["cumulativeScore"] = {
+        "wins": 1,
+        "losses": 7,
+        "ties": 0,
+        "scoreByStat": {"0": {"score": 34.0, "result": "LOSS"}},
+    }
+    m["away"]["cumulativeScoreLive"] = {
+        "wins": 2,
+        "losses": 6,
+        "ties": 0,
+        "scoreByStat": {"0": {"score": 167.0, "result": "LOSS"}, "6": {"score": 69.0, "result": "WIN"}},
+    }
+    league = parse_league(base, 2075231076, 2027, "now")
+    mm = next(x for x in league.matchups_for(1) if x.away is not None and x.home.team_id == m["home"]["teamId"])
+    assert mm.home.by_stat[0].score == 186.0 and mm.home.by_stat[6].result == "LOSS"
+    assert mm.away.by_stat[0].score == 167.0
+    assert mm.home.record == (6, 2, 0) and mm.away.record == (2, 6, 0)
+    assert mm.home.is_live is True
+
+
+def test_parse_falls_back_to_cumulative_score_without_live():
+    base = json.loads(FIXTURE.read_text())
+    league = parse_league(base, 2075231076, 2027, "now")
+    mm = next(x for x in league.matchups_for(1) if x.away is not None)
+    assert mm.home.is_live is False and mm.home.record == (0, 0, 8)  # preseason fixture: eight 0-0 ties
+    assert "mMatchupScore" in LEAGUE_VIEWS and "mSchedule" not in LEAGUE_VIEWS
