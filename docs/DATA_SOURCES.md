@@ -88,6 +88,9 @@ was inspected. Anything else is marked planned or unverified.
   {score,result}}}`; `away` absent on a bye week), `transactions[]` (type DRAFT / ROSTER / WAIVER /
   FREEAGENT / FUTURE_ROSTER / TRADE_ACCEPT, status EXECUTED / CANCELED / FAILED_*, `items[]` with
   type ADD / DROP / LINEUP / DRAFT / TRADE, playerId, fromTeamId, toTeamId, `proposedDate` ms).
+- Live weekly category scores (`schedule[].home/away.cumulativeScore.scoreByStat`) come from the
+  `mMatchup` view; requesting `mSchedule` alongside it replaces that schedule with an unscored copy, so
+  `mSchedule` is not requested (verified 2026-10-21 after the first games).
 - The default `mRoster` view is the roster as it stood when the current scoring period (day)
   opened: an add/drop executed today appears only under `?view=mRoster&scoringPeriodId=<current+1>`
   (verified 2026-10-20 with an executed FREEAGENT transaction missing from the default view). The

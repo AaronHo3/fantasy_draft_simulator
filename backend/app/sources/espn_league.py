@@ -20,7 +20,7 @@ from app.sources.espn_public import ESPN_BASE, ESPN_TIMEOUT_S, USER_AGENT
 
 log = logging.getLogger(__name__)
 
-LEAGUE_VIEWS = ("mTeam", "mRoster", "mSettings", "mMatchup", "mSchedule", "mTransactions2", "mStatus")
+LEAGUE_VIEWS = ("mTeam", "mRoster", "mSettings", "mMatchup", "mTransactions2", "mStatus")  # mSchedule would replace mMatchup's scored schedule with an unscored one
 ROSTER_MOVE_KINDS = frozenset({"ADD", "DROP", "TRADE"})
 IR_SLOT_ID = 13
 CENTER_POSITION_ID = 5
