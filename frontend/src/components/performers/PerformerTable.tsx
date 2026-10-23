@@ -182,6 +182,37 @@ export function PerformerTable({ rows, metric }: PerformerTableProps) {
                           ))}
                         </tbody>
                       </table>
+                      <table className="grid compact" aria-label={`${r.player.name} contribution by category`} style={{ marginTop: 8 }}>
+                        <thead>
+                          <tr>
+                            <th scope="col">Contribution by category (units)</th>
+                            <th scope="col" className="num">Actual</th>
+                            <th scope="col" className="num">Expected</th>
+                            <th scope="col" className="num">Δ</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Object.entries(r.contribution_by_category).map(([k, v]) => {
+                            const e = r.expected_by_category?.[k] ?? null
+                            return (
+                              <tr key={k}>
+                                <th scope="row">{k.replace('_PCT', '%').replace('FG3M', '3PM')}</th>
+                                <td className="num">{fmtNum(v, 1)}</td>
+                                <td className="num">{e === null ? '—' : fmtNum(e, 1)}</td>
+                                <td className={`num ${e === null ? 'muted' : v - e > 0 ? 'pos' : v - e < 0 ? 'neg' : ''}`}>{e === null ? '—' : fmtSigned(v - e, 1)}</td>
+                              </tr>
+                            )
+                          })}
+                          <tr>
+                            <th scope="row">Total</th>
+                            <td className="num">
+                              <b>{fmtNum(r.contribution, 1)}</b>
+                            </td>
+                            <td className="num">{r.expected_contribution === null ? '—' : fmtNum(r.expected_contribution, 1)}</td>
+                            <td className="num">{r.over_expected === null ? '—' : fmtSigned(r.over_expected, 1)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
                       <p className="muted" style={{ fontSize: 11, marginTop: 4 }}>
                         Contribution {fmtNum(r.contribution, 2)} ({r.contribution_per_game === null ? '—' : fmtNum(r.contribution_per_game, 2)} per game) · expected{' '}
                         {r.expected_contribution === null ? 'no baseline' : fmtNum(r.expected_contribution, 2)} · {r.periods} week{r.periods === 1 ? '' : 's'} with games

@@ -3666,6 +3666,27 @@
       "type": "object",
       "title": "Category Z"
      },
+     "contribution_by_category": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Contribution By Category"
+     },
+     "expected_by_category": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "type": "number"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expected By Category"
+     },
      "flags": {
       "items": {
        "type": "string"
@@ -3691,6 +3712,8 @@
      "actual_per_game",
      "expected_per_game",
      "category_z",
+     "contribution_by_category",
+     "expected_by_category",
      "flags"
     ],
     "title": "PerformerRow"
@@ -3738,6 +3761,27 @@
       "type": "string",
       "title": "Source"
      },
+     "categories": {
+      "items": {
+       "$ref": "#/components/schemas/CategoryDef"
+      },
+      "type": "array",
+      "title": "Categories"
+     },
+     "unit_sizes": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Unit Sizes"
+     },
+     "benchmark_rates": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Benchmark Rates"
+     },
      "contributors": {
       "items": {
        "$ref": "#/components/schemas/PerformerRow"
@@ -3769,6 +3813,9 @@
      "periods_available",
      "baseline",
      "source",
+     "categories",
+     "unit_sizes",
+     "benchmark_rates",
      "contributors",
      "overperformers",
      "notes"

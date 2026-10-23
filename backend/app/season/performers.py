@@ -150,9 +150,24 @@ def rank_performers(
                 "category_z": {
                     k: round(float(z_act[r, j] - z_proj[r, j]), 3) if games else 0.0 for j, k in enumerate(keys)
                 },
+                "contribution_by_category": {
+                    k: round(float(z_act[r, j]) * games, 3) if games else 0.0 for j, k in enumerate(keys)
+                },
+                "expected_by_category": (
+                    {k: round(float(z_proj[r, j]) * games, 3) for j, k in enumerate(keys)} if has_baseline else None
+                ),
                 "flags": flags,
             }
         )
     contributors = sorted(rows, key=lambda x: (-x["contribution"], -x["games"]))
     overperformers = sorted([x for x in rows if x["over_expected"] is not None], key=lambda x: -x["over_expected"])
     return contributors, overperformers
+
+
+def unit_sizes(snap: Snapshot, league: LeagueConfig) -> tuple[dict[str, float], dict[str, float]]:
+    """Per-game amount of each category that equals one contribution unit, and the FG/FT benchmark rates."""
+    info = _per_game_scale(snap, league)
+    return (
+        {k: round(float(s), 4) for k, s in zip(info.keys, info.scales, strict=True)},
+        {k: round(float(v), 4) for k, v in info.benchmark_rates.items()},
+    )

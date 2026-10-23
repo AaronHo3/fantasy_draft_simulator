@@ -1246,6 +1246,14 @@ export interface components {
             category_z: {
                 [key: string]: number;
             };
+            /** Contribution By Category */
+            contribution_by_category: {
+                [key: string]: number;
+            };
+            /** Expected By Category */
+            expected_by_category: {
+                [key: string]: number;
+            } | null;
             /** Flags */
             flags: string[];
         };
@@ -1267,6 +1275,16 @@ export interface components {
             baseline: string;
             /** Source */
             source: string;
+            /** Categories */
+            categories: components["schemas"]["CategoryDef"][];
+            /** Unit Sizes */
+            unit_sizes: {
+                [key: string]: number;
+            };
+            /** Benchmark Rates */
+            benchmark_rates: {
+                [key: string]: number;
+            };
             /** Contributors */
             contributors: components["schemas"]["PerformerRow"][];
             /** Overperformers */

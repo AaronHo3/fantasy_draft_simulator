@@ -635,6 +635,10 @@ class PerformerRow(BaseModel):
     actual_per_game: dict[str, float | None]
     expected_per_game: dict[str, float | None] | None
     category_z: dict[str, float]  # per-category actual z (per game) minus projected z (per game)
+    contribution_by_category: dict[str, float]  # cumulative units per category (sums to contribution)
+    expected_by_category: (
+        dict[str, float] | None
+    )  # cumulative expected units per category (sums to expected_contribution)
     flags: list[str]
 
 
@@ -646,6 +650,9 @@ class PerformersResponse(BaseModel):
     periods_available: list[int]
     baseline: str
     source: str
+    categories: list[CategoryDef]
+    unit_sizes: dict[str, float]  # per-game amount of each category worth one contribution unit
+    benchmark_rates: dict[str, float]  # pool FG% / FT% that shooting impact is measured against
     contributors: list[PerformerRow]
     overperformers: list[PerformerRow]
     notes: list[str]

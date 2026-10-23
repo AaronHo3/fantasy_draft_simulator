@@ -23,7 +23,7 @@ from app.recommend import service as svc
 from app.season.free_agents import free_agents as rank_free_agents
 from app.season.link import match_teams
 from app.season.live_status import status_overlay, write_live_status
-from app.season.performers import BASELINE_LABEL, rank_performers
+from app.season.performers import BASELINE_LABEL, rank_performers, unit_sizes
 from app.season.power import matchup_odds, power_rankings
 from app.season.results import week_results
 from app.season.sync import SyncPlan, plan_sync
@@ -376,6 +376,7 @@ def performers(ctx: AppContext, session_id: str, manager_id: str, period: int | 
     if not records and period is None:
         notes.append("no ESPN box scores stored yet: run a sync during a matchup week")
     contributors, overperformers = rank_performers(snap, state, records)
+    units, rates = unit_sizes(snap, state.league)
 
     def view(row: dict, rank: int) -> S.PerformerRow:
         pid = row.pop("player_id")
@@ -395,6 +396,9 @@ def performers(ctx: AppContext, session_id: str, manager_id: str, period: int | 
         periods_available=available,
         baseline=BASELINE_LABEL,
         source="ESPN applied box scores per matchup period (what counted for the fantasy team that week)",
+        categories=state.league.categories,
+        unit_sizes=units,
+        benchmark_rates=rates,
         contributors=c_rows,
         overperformers=o_rows,
         notes=notes,

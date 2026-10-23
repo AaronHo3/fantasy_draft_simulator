@@ -20,6 +20,8 @@ function row(rank: number, id: string, name: string, contribution: number, over:
     actual_per_game: { PTS: 20, REB: 5, AST: 4, STL: 1, BLK: 0.7, TOV: 2, FG3M: 2, FG3A: 5, FGM: 7, FGA: 15, FTM: 4, FTA: 5, FG_PCT: 0.467, FT_PCT: 0.8 },
     expected_per_game: over === null ? null : { PTS: 18, REB: 5, AST: 4, STL: 1, BLK: 0.7, TOV: 2, FG3M: 2, FG3A: 5, FGM: 7, FGA: 15, FTM: 4, FTA: 5, FG_PCT: 0.467, FT_PCT: 0.8 },
     category_z: { PTS: 0.3 },
+    contribution_by_category: { PTS: 7.0, REB: 5.0 },
+    expected_by_category: over === null ? null : { PTS: 6.5, REB: 5.0 },
     flags,
   }
 }
@@ -47,6 +49,11 @@ describe('PerformerTable', () => {
     expect(detail).toHaveTextContent('21/45')
     expect(detail).toHaveTextContent('46.7%')
     expect(detail).toHaveTextContent(/TOV/)
+    // the per-category breakdown that explains the headline number
+    const breakdown = within(detail).getByRole('table', { name: /contribution by category/i })
+    expect(breakdown).toHaveTextContent('7.0')
+    expect(breakdown).toHaveTextContent('6.5')
+    expect(breakdown).toHaveTextContent('+0.5')
   })
 
   it('shows a dash for a player without a baseline instead of inventing one', () => {

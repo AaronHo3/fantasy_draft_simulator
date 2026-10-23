@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import type { PerformersResponse } from '../api/types'
+import { Explainer } from '../components/performers/Explainer'
 import { LeaderboardCard } from '../components/performers/LeaderboardCard'
 import { PerformerTable, type Metric } from '../components/performers/PerformerTable'
 import { buildUrl } from '../lib/router'
@@ -8,8 +9,8 @@ import { useDraftStore } from '../store/draftStore'
 
 type Scope = 'week' | 'season'
 
-const CONTRIB_TIP = 'Top contributors: each player\'s production on the league\'s category scale (one unit = one category standard deviation of per-game production), summed over the games ESPN counted for this team. Points, rebounds, assists, steals, blocks, threes, FG% and FT% impact; turnovers count against.'
-const OVER_TIP = 'Biggest overperformers: contribution minus what the projection expected for the games the player actually played. Baseline: the snapshot\'s per-game projection (learned model blended with ESPN, with rookie and injury-return adjustments). Players with no projection, or no games, are not ranked.'
+const CONTRIB_TIP = 'Top contributors: Σ over categories of (per-game stat ÷ unit size) × games ESPN counted for this team. One unit = one standard deviation of per-game production across the league pool; FG%/FT% as shooting impact; turnovers count against. See "How contribution and expected are calculated" below.'
+const OVER_TIP = 'Biggest overperformers: contribution minus expected, where expected = the same formula on the player\'s projected per-game line × the games he actually played. Baseline: the snapshot\'s per-game projection (learned model blended with ESPN, with rookie and injury-return adjustments). No projection or no games = not ranked.'
 
 /** Team performers: who produced the most for a fantasy team, and who beat their projection by the most. */
 export function PerformersScreen() {
@@ -121,6 +122,7 @@ export function PerformersScreen() {
           <p className="muted">{data.notes.join(' ') || 'No box scores for this selection yet.'}</p>
         </div>
       )}
+      {data && <Explainer unitSizes={data.unit_sizes} benchmarkRates={data.benchmark_rates} categories={data.categories} />}
       {data && data.contributors.length > 0 && (
         <>
           <div className="leaderboards">

@@ -1552,3 +1552,10 @@ table.grid.compact td {
     grid-template-columns: 1fr;
   }
 }
+
+.explainer .units {
+  margin: 0;
+  padding-left: 18px;
+  columns: 2;
+  font-size: 13px;
+}

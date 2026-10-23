@@ -921,6 +921,12 @@ def test_performers_rankings_distinguish_contribution_from_overperformance(clien
     assert abs(star_row["over_expected"]) < 0.5 and star_row["games"] == 3
     assert star_row["actual"]["PTS"] == pytest.approx(star_row["expected"]["PTS"], rel=0.05)
     assert "FGM" in star_row["actual"] and "FGA" in star_row["actual"] and star_row["actual"]["FG_PCT"] is not None
+    # the breakdown explains the headline numbers: per-category units sum to the totals, units are published
+    keys = [c["key"] for c in body["categories"]]
+    assert set(star_row["contribution_by_category"]) == set(keys) and set(star_row["expected_by_category"]) == set(keys)
+    assert sum(star_row["contribution_by_category"].values()) == pytest.approx(star_row["contribution"], abs=0.02)
+    assert sum(star_row["expected_by_category"].values()) == pytest.approx(star_row["expected_contribution"], abs=0.02)
+    assert all(body["unit_sizes"][k] > 0 for k in keys) and 0 < body["benchmark_rates"]["FG_PCT"] < 1
     dnp_row = next(x for x in contrib if x["player"]["player_id"] == dnp)
     assert dnp_row["games"] == 0 and dnp_row["contribution"] == 0 and dnp_row["flags"] == ["no games"]
     assert contrib[-1]["player"]["player_id"] == dnp  # zero production ranks below everyone who played
