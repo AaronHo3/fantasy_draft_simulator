@@ -70,7 +70,7 @@ export function PerformerTable({ rows, metric }: PerformerTableProps) {
   const toggleSort = (key: SortKey, defaultDesc: boolean) =>
     setSort((s) => (s.key === key ? { key, desc: !s.desc } : { key, desc: defaultDesc }))
   const head = (key: SortKey, label: string, title: string, defaultDesc = true, numeric = true) => (
-    <th scope="col" className={numeric ? 'num' : undefined} aria-sort={sort.key === key ? (sort.desc ? 'descending' : 'ascending') : 'none'}>
+    <th key={key} scope="col" className={numeric ? 'num' : undefined} aria-sort={sort.key === key ? (sort.desc ? 'descending' : 'ascending') : 'none'}>
       <button type="button" className="sort" onClick={() => toggleSort(key, defaultDesc)} aria-label={`Sort by ${title}`} title={title}>
         {label}
         {sort.key === key ? (sort.desc ? ' ▾' : ' ▴') : ''}
