@@ -144,6 +144,25 @@ Once the draft is complete a **Season** tab appears.
    session is set to weekly) are shown as warnings and never applied automatically; change the
    session in Setup if you want the simulation to use daily lineups.
 
+## Team performers
+
+The **Performers** tab (after the draft, once the league is linked) ranks any team's players two ways,
+per week or season to date:
+
+- **Top contributors**: production on the league's category scale (one unit = one category standard
+  deviation of per-game production; turnovers count against; FG%/FT% as impact against the pool rate),
+  summed over the games ESPN actually counted for that team that week. Source: ESPN's applied box
+  scores per matchup period, captured by every sync (the current week and the one before it) and kept,
+  so earlier weeks can be revisited.
+- **Biggest overperformers**: contribution minus the projection baseline (the snapshot's per-game
+  projection x games actually played). A star can lead contribution while a bench player leads this.
+  Players with no projection (prior only) or no games are shown but not ranked; fewer than three
+  games is flagged "small sample".
+
+Each row expands to the full line (points, rebounds, assists, steals, blocks, turnovers, threes,
+FG and FT makes/attempts and percentages), actual next to expected, totals and per game.
+Portraits come from ESPN's headshot CDN with an initials fallback.
+
 ## Corrections and undo
 
 - **Undo last pick**: the "Undo #n" button in the scoreboard (only the most recent committed pick

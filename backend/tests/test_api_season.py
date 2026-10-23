@@ -795,3 +795,161 @@ def test_cached_league_reloads_when_a_newer_payload_was_written(client, complete
     assert season.cached_league(ctx, LEAGUE_ID, "2026-27").fetched_at == "2026-10-23T07:43:00+00:00"
     # and the overview reports the newer sync time even though this process did not run it
     assert client.get(f"/api/sessions/{sid}/season/overview").json()["synced_at"] == "2026-10-23T07:43:00+00:00"
+
+
+# --- team performers --------------------------------------------------------------------------------
+
+
+def boxscore_from_state(client, sid, period, scale_by_player=None, games=3):
+    """Applied stats for every roster in the session: projection per game x games, scaled per player."""
+
+    from app.engine.categories import PRIM_IDX
+
+    st = client.get(f"/api/sessions/{sid}/state").json()
+    ctx = client.app.state.ctx
+    snap = ctx.registry.get(ctx.registry.default_id())
+    schedule = []
+    managers = st["league"]["managers"]
+    for i in range(0, len(managers), 2):
+        home = managers[i]["id"]
+        away = managers[i + 1]["id"] if i + 1 < len(managers) else None
+        entry = {"id": i + 1, "matchupPeriodId": period, "winner": "UNDECIDED"}
+        for side, mid in (("home", home), ("away", away)):
+            if mid is None:
+                continue
+            entries = []
+            for pid in st["current_rosters"][mid]:
+                pg = snap.per_game[snap.index[pid]]
+                mult = (scale_by_player or {}).get(pid, 1.0)
+                g = 0 if mult == 0 else games
+                stats = {"42": g, "40": round(pg[PRIM_IDX["MIN"]] * g * mult, 1)}
+                for sid_, key in (
+                    (0, "PTS"),
+                    (6, "REB"),
+                    (3, "AST"),
+                    (2, "STL"),
+                    (1, "BLK"),
+                    (11, "TOV"),
+                    (17, "FG3M"),
+                    (18, "FG3A"),
+                    (13, "FGM"),
+                    (14, "FGA"),
+                    (15, "FTM"),
+                    (16, "FTA"),
+                ):
+                    stats[str(sid_)] = round(pg[PRIM_IDX[key]] * g * mult, 2)
+                entries.append(
+                    {
+                        "playerId": espn_id_of(pid),
+                        "lineupSlotId": 0,
+                        "playerPoolEntry": {
+                            "player": {
+                                "id": espn_id_of(pid),
+                                "fullName": snap.players[snap.index[pid]].name,
+                                "stats": [{"id": "05null", "stats": stats}],
+                            }
+                        },
+                    }
+                )
+            entry[side] = {"teamId": int(mid[1:]), "rosterForMatchupPeriod": {"entries": entries}}
+        schedule.append(entry)
+    return {"scoringPeriodId": 1 + 6 * (period - 1), "schedule": schedule}
+
+
+def install_boxscore(client, payloads_by_period):
+    ctx = client.app.state.ctx
+    calls = []
+
+    def fake(league_id, season_id, scoring_period_id):
+        calls.append(scoring_period_id)
+        for period, payload in payloads_by_period.items():
+            if payload["scoringPeriodId"] == scoring_period_id:
+                return payload
+        return {"scoringPeriodId": scoring_period_id, "schedule": []}
+
+    ctx.espn_fetch_boxscore = fake
+    return calls
+
+
+def test_sync_stores_applied_stats_for_the_current_and_previous_period(client, complete_session):
+    sid = complete_session
+    install_fakes(client, league_from_state(client, sid, matchups=week1()))
+    link(client, sid)
+    st = client.get(f"/api/sessions/{sid}/state").json()
+    star = st["current_rosters"]["m01"][0]
+    calls = install_boxscore(client, {1: boxscore_from_state(client, sid, 1, {star: 2.0})})
+    r = client.post(f"/api/sessions/{sid}/espn/sync", json={})
+    assert r.status_code == 200, r.text
+    ctx = client.app.state.ctx
+    rows = ctx.store.period_player_stats(sid, period=1)
+    assert {row["manager_id"] for row in rows} == {"m01", "m02", "m03"}
+    mine = next(row for row in rows if row["player_id"] == star)
+    assert mine["games"] == 3 and mine["source"] == "espn_boxscore" and mine["stats"]["PTS"] > 0
+    assert calls and calls[0] == 1  # current period's first scoring period id
+
+
+def test_performers_rankings_distinguish_contribution_from_overperformance(client, complete_session):
+    sid = complete_session
+    install_fakes(client, league_from_state(client, sid, matchups=week1()))
+    link(client, sid)
+    # everyone exactly on projection first: that ordering tells us who the star and the role player are
+    install_boxscore(client, {1: boxscore_from_state(client, sid, 1)})
+    assert client.post(f"/api/sessions/{sid}/espn/sync", json={}).status_code == 200
+    flat = client.get(f"/api/sessions/{sid}/season/performers", params={"manager_id": "m01", "period": 1}).json()[
+        "contributors"
+    ]
+    assert all(x["over_expected"] is not None and abs(x["over_expected"]) < 0.05 for x in flat)  # rounding only
+    star, dnp, role = flat[0]["player"]["player_id"], flat[1]["player"]["player_id"], flat[-1]["player"]["player_id"]
+    # then: the star plays to projection, the weakest player beats his projection (by less than the gap to
+    # the star, so the star still leads contribution), and one player does not play
+    boost = 1.0 + 0.5 * (flat[0]["contribution"] / flat[-1]["contribution"] - 1.0)
+    assert boost > 1.0
+    from app.season import service as season
+
+    install_boxscore(client, {1: boxscore_from_state(client, sid, 1, {star: 1.0, role: boost, dnp: 0.0})})
+    season.store_period_stats(client.app.state.ctx, sid, 1)
+    r = client.get(f"/api/sessions/{sid}/season/performers", params={"manager_id": "m01", "period": 1})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["scope"] == "week" and body["period"] == 1 and body["periods_available"] == [1]
+    assert body["baseline"] and "projection" in body["baseline"].lower()
+    contrib = body["contributors"]
+    over = body["overperformers"]
+    assert contrib[0]["player"]["player_id"] == star  # most total production
+    assert over[0]["player"]["player_id"] == role and over[0]["over_expected"] > 0  # biggest gain vs projection
+    star_row = next(x for x in contrib if x["player"]["player_id"] == star)
+    assert abs(star_row["over_expected"]) < 0.5 and star_row["games"] == 3
+    assert star_row["actual"]["PTS"] == pytest.approx(star_row["expected"]["PTS"], rel=0.05)
+    assert "FGM" in star_row["actual"] and "FGA" in star_row["actual"] and star_row["actual"]["FG_PCT"] is not None
+    dnp_row = next(x for x in contrib if x["player"]["player_id"] == dnp)
+    assert dnp_row["games"] == 0 and dnp_row["contribution"] == 0 and dnp_row["flags"] == ["no games"]
+    assert contrib[-1]["player"]["player_id"] == dnp  # zero production ranks below everyone who played
+    assert all(x["games"] >= 1 for x in over)  # players without games are not ranked as over/under performers
+    assert all(x["rank"] == i + 1 for i, x in enumerate(contrib))
+
+
+def test_performers_season_scope_accumulates_periods_and_flags_small_samples(client, complete_session):
+    sid = complete_session
+    install_fakes(client, league_from_state(client, sid, matchups=week1()))
+    link(client, sid)
+    st = client.get(f"/api/sessions/{sid}/state").json()
+    roster = st["current_rosters"]["m01"]
+    p1 = boxscore_from_state(client, sid, 1, {roster[0]: 1.0}, games=3)
+    p2 = boxscore_from_state(client, sid, 2, {roster[0]: 1.0, roster[-1]: 0.0}, games=1)
+    install_boxscore(client, {1: p1, 2: p2})
+    assert client.post(f"/api/sessions/{sid}/espn/sync", json={}).status_code == 200
+    ctx = client.app.state.ctx
+    from app.season import service as season
+
+    season.store_period_stats(ctx, sid, 2)  # as the next week's sync would
+    body = client.get(f"/api/sessions/{sid}/season/performers", params={"manager_id": "m01"}).json()
+    assert body["scope"] == "season" and body["periods_available"] == [1, 2]
+    top = next(x for x in body["contributors"] if x["player"]["player_id"] == roster[0])
+    assert top["games"] == 4 and top["periods"] == 2
+    last = next(x for x in body["contributors"] if x["player"]["player_id"] == roster[-1])
+    assert last["games"] == 3 and last["periods"] == 1
+    week2 = client.get(f"/api/sessions/{sid}/season/performers", params={"manager_id": "m01", "period": 2}).json()
+    assert all("small sample" in x["flags"] for x in week2["overperformers"])
+    assert client.get(f"/api/sessions/{sid}/season/performers", params={"manager_id": "zz"}).status_code == 422
+    empty = client.get(f"/api/sessions/{sid}/season/performers", params={"manager_id": "m01", "period": 5}).json()
+    assert empty["contributors"] == [] and any("no ESPN box scores" in n for n in empty["notes"])

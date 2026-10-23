@@ -17,8 +17,21 @@ from app.draft.events import DraftState
 from app.engine.categories import PRIM_IDX, PRIMITIVES, category_values, compare_categories, each_category_score, totals
 from app.projections.snapshot import Snapshot
 
-COLS = {"MIN": "min", "PTS": "pts", "REB": "reb", "AST": "ast", "STL": "stl", "BLK": "blk", "FG3M": "fg3m", "FG3A": "fg3a",
-        "FGM": "fgm", "FGA": "fga", "FTM": "ftm", "FTA": "fta", "TOV": "tov"}
+COLS = {
+    "MIN": "min",
+    "PTS": "pts",
+    "REB": "reb",
+    "AST": "ast",
+    "STL": "stl",
+    "BLK": "blk",
+    "FG3M": "fg3m",
+    "FG3A": "fg3a",
+    "FGM": "fgm",
+    "FGA": "fga",
+    "FTM": "ftm",
+    "FTA": "fta",
+    "TOV": "tov",
+}
 
 
 def fetch_logs(season: str, season_type: str = "Regular Season") -> pd.DataFrame:
@@ -30,9 +43,16 @@ def fetch_logs(season: str, season_type: str = "Regular Season") -> pd.DataFrame
         return fetch_game_logs(season, season_type)
     from nba_api.stats.endpoints import playergamelogs
 
-    raw = playergamelogs.PlayerGameLogs(season_nullable=season, season_type_nullable=season_type, timeout=60).get_data_frames()[0]
-    out = pd.DataFrame({"nba_id": raw["PLAYER_ID"].astype(int), "game_id": raw["GAME_ID"].astype(str),
-                        "game_date": pd.to_datetime(raw["GAME_DATE"]).dt.date})
+    raw = playergamelogs.PlayerGameLogs(
+        season_nullable=season, season_type_nullable=season_type, timeout=60
+    ).get_data_frames()[0]
+    out = pd.DataFrame(
+        {
+            "nba_id": raw["PLAYER_ID"].astype(int),
+            "game_id": raw["GAME_ID"].astype(str),
+            "game_date": pd.to_datetime(raw["GAME_DATE"]).dt.date,
+        }
+    )
     for k, c in COLS.items():
         out[c] = raw[k].astype(float)
     return out
@@ -50,7 +70,11 @@ def weekly_lines(logs: pd.DataFrame, nba_ids: dict[int, str]) -> pd.DataFrame:
     dates = pd.to_datetime(g["game_date"]).dt.date
     g["week"] = [week_start(d).isoformat() for d in dates]
     g["manager_id"] = g["nba_id"].map(nba_ids)
-    agg = g.groupby(["nba_id", "manager_id", "week"]).agg(gp=("game_id", "nunique"), **{c: (c, "sum") for c in COLS.values()}).reset_index()
+    agg = (
+        g.groupby(["nba_id", "manager_id", "week"])
+        .agg(gp=("game_id", "nunique"), **{c: (c, "sum") for c in COLS.values()})
+        .reset_index()
+    )
     return agg
 
 
@@ -76,7 +100,9 @@ def week_results(lines: pd.DataFrame, week: str, managers: list[str], n_starting
     return WeekResult(week, team_tot, counted)
 
 
-def standings_table(state: DraftState, snap: Snapshot, lines: pd.DataFrame, week: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+def standings_table(
+    state: DraftState, snap: Snapshot, lines: pd.DataFrame, week: str
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """(team table with category values + categories won vs the field, head-to-head grid) for one week."""
     league = state.league
     cats, tie = league.categories, league.tie_rule
@@ -94,10 +120,24 @@ def standings_table(state: DraftState, snap: Snapshot, lines: pd.DataFrame, week
             sc = each_category_score(compare_categories(wr.team_totals[a], wr.team_totals[b], cats, tie), tie)
             grid.loc[names[a], names[b]] = sc
             scores.append(sc)
-        rows.append({"team": names[a], "games_counted": int(wr.team_totals[a][PRIM_IDX["GP"]]), "players_counted": len(wr.counted[a]),
-                     **{c.key: (round(vals[c.key], 3) if vals[c.key] is not None and c.kind.value == "ratio" else (None if vals[c.key] is None else round(vals[c.key]))) for c in cats},
-                     "FGA": int(wr.team_totals[a][PRIM_IDX["FGA"]]), "FTA": int(wr.team_totals[a][PRIM_IDX["FTA"]]),
-                     "avg_cats_won_vs_field": round(float(np.mean(scores)), 2) if scores else None})
+        rows.append(
+            {
+                "team": names[a],
+                "games_counted": int(wr.team_totals[a][PRIM_IDX["GP"]]),
+                "players_counted": len(wr.counted[a]),
+                **{
+                    c.key: (
+                        round(vals[c.key], 3)
+                        if vals[c.key] is not None and c.kind.value == "ratio"
+                        else (None if vals[c.key] is None else round(vals[c.key]))
+                    )
+                    for c in cats
+                },
+                "FGA": int(wr.team_totals[a][PRIM_IDX["FGA"]]),
+                "FTA": int(wr.team_totals[a][PRIM_IDX["FTA"]]),
+                "avg_cats_won_vs_field": round(float(np.mean(scores)), 2) if scores else None,
+            }
+        )
     df = pd.DataFrame(rows).sort_values("avg_cats_won_vs_field", ascending=False)
     for c in cats:
         df[f"rank_{c.key}"] = df[c.key].rank(ascending=not c.higher_is_better, method="min")

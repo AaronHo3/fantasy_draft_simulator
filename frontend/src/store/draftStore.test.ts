@@ -49,6 +49,7 @@ function fakeApi(state: DraftStateView, overrides: Partial<ApiClient> = {}): Api
     seasonFreeAgents: notImpl,
     seasonResults: notImpl,
     seasonPredictions: notImpl,
+    seasonPerformers: notImpl,
     ...overrides,
   }
 }

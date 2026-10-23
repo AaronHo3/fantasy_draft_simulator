@@ -29,6 +29,7 @@ import type {
   FreeAgentsResponse,
   WeekResultsResponse,
   PredictionsResponse,
+  PerformersResponse,
 } from './types'
 
 export class ApiError extends Error {
@@ -116,6 +117,7 @@ export interface ApiClient {
   seasonFreeAgents(id: string, opts?: { limit?: number; position?: string | null; q?: string | null }): Promise<FreeAgentsResponse>
   seasonResults(id: string, period: number): Promise<WeekResultsResponse>
   seasonPredictions(id: string): Promise<PredictionsResponse>
+  seasonPerformers(id: string, managerId: string, period?: number | null): Promise<PerformersResponse>
 }
 
 export function createApiClient(fetchImpl: FetchLike = (i, o) => fetch(i, o), base = '/api'): ApiClient {
@@ -186,6 +188,8 @@ export function createApiClient(fetchImpl: FetchLike = (i, o) => fetch(i, o), ba
       request('GET', `/sessions/${encodeURIComponent(id)}/season/free-agents${qs({ limit: opts.limit, position: opts.position, q: opts.q })}`),
     seasonResults: (id, period) => request('GET', `/sessions/${encodeURIComponent(id)}/season/results${qs({ period })}`),
     seasonPredictions: (id) => request('GET', `/sessions/${encodeURIComponent(id)}/season/predictions`),
+    seasonPerformers: (id, managerId, period = null) =>
+      request('GET', `/sessions/${encodeURIComponent(id)}/season/performers${qs({ manager_id: managerId, period })}`),
   }
 }
 

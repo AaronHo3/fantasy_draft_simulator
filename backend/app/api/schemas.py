@@ -146,6 +146,7 @@ class PlayerView(BaseModel):
     player_id: str
     name: str
     team: str | None
+    espn_id: int | None = None  # for ESPN headshots and links
     primary_position: str | None
     eligible_positions: list[str]
     eligibility_source: str
@@ -616,3 +617,35 @@ class PredictionsResponse(BaseModel):
     ids: ResponseIds
     predictions: list[PredictionView]
     summary: PredictionSummary
+
+
+class PerformerRow(BaseModel):
+    rank: int
+    player: PlayerView
+    games: int
+    periods: int
+    minutes: float
+    contribution: float  # cumulative category value on the projection z scale (value-games)
+    contribution_per_game: float | None
+    expected_contribution: float | None  # projection per game x games played; None without a baseline
+    over_expected: float | None
+    over_expected_per_game: float | None
+    actual: dict[str, float | None]  # totals (counting, makes/attempts) + FG_PCT/FT_PCT
+    expected: dict[str, float | None] | None
+    actual_per_game: dict[str, float | None]
+    expected_per_game: dict[str, float | None] | None
+    category_z: dict[str, float]  # per-category actual z (per game) minus projected z (per game)
+    flags: list[str]
+
+
+class PerformersResponse(BaseModel):
+    ids: ResponseIds
+    manager_id: str
+    scope: Literal["week", "season"]
+    period: int | None
+    periods_available: list[int]
+    baseline: str
+    source: str
+    contributors: list[PerformerRow]
+    overperformers: list[PerformerRow]
+    notes: list[str]

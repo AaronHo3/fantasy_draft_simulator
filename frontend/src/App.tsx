@@ -5,6 +5,7 @@ import { browserStorage, SESSION_KEY } from './lib/storage'
 import { DraftScreen } from './screens/DraftScreen'
 import { HealthScreen } from './screens/HealthScreen'
 import { RecapScreen } from './screens/RecapScreen'
+import { PerformersScreen } from './screens/PerformersScreen'
 import { SeasonScreen } from './screens/SeasonScreen'
 import { SetupScreen } from './screens/SetupScreen'
 import { useDraftStore } from './store/draftStore'
@@ -14,6 +15,7 @@ const NAV: { route: Route; label: string; afterDraft?: boolean }[] = [
   { route: 'draft', label: 'Draft' },
   { route: 'recap', label: 'Recap' },
   { route: 'season', label: 'Season', afterDraft: true },
+  { route: 'performers', label: 'Performers', afterDraft: true },
   { route: 'health', label: 'Data health' },
 ]
 
@@ -46,6 +48,9 @@ export default function App() {
       break
     case 'season':
       screen = <SeasonScreen />
+      break
+    case 'performers':
+      screen = <PerformersScreen />
       break
     default:
       screen = isComplete ? <RecapScreen /> : <DraftScreen />

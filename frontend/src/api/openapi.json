@@ -1437,6 +1437,73 @@
      }
     }
    }
+  },
+  "/api/sessions/{session_id}/season/performers": {
+   "get": {
+    "summary": "Season Performers",
+    "operationId": "season_performers_api_sessions__session_id__season_performers_get",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     },
+     {
+      "name": "manager_id",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "minLength": 1,
+       "title": "Manager Id"
+      }
+     },
+     {
+      "name": "period",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 22,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Period"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PerformersResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
   }
  },
  "components": {
@@ -3453,6 +3520,261 @@
     ],
     "title": "MatchupResponse"
    },
+   "PerformerRow": {
+    "properties": {
+     "rank": {
+      "type": "integer",
+      "title": "Rank"
+     },
+     "player": {
+      "$ref": "#/components/schemas/PlayerView"
+     },
+     "games": {
+      "type": "integer",
+      "title": "Games"
+     },
+     "periods": {
+      "type": "integer",
+      "title": "Periods"
+     },
+     "minutes": {
+      "type": "number",
+      "title": "Minutes"
+     },
+     "contribution": {
+      "type": "number",
+      "title": "Contribution"
+     },
+     "contribution_per_game": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Contribution Per Game"
+     },
+     "expected_contribution": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expected Contribution"
+     },
+     "over_expected": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Over Expected"
+     },
+     "over_expected_per_game": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Over Expected Per Game"
+     },
+     "actual": {
+      "additionalProperties": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "type": "object",
+      "title": "Actual"
+     },
+     "expected": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "anyOf": [
+          {
+           "type": "number"
+          },
+          {
+           "type": "null"
+          }
+         ]
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expected"
+     },
+     "actual_per_game": {
+      "additionalProperties": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "type": "object",
+      "title": "Actual Per Game"
+     },
+     "expected_per_game": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "anyOf": [
+          {
+           "type": "number"
+          },
+          {
+           "type": "null"
+          }
+         ]
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expected Per Game"
+     },
+     "category_z": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Category Z"
+     },
+     "flags": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Flags"
+     }
+    },
+    "type": "object",
+    "required": [
+     "rank",
+     "player",
+     "games",
+     "periods",
+     "minutes",
+     "contribution",
+     "contribution_per_game",
+     "expected_contribution",
+     "over_expected",
+     "over_expected_per_game",
+     "actual",
+     "expected",
+     "actual_per_game",
+     "expected_per_game",
+     "category_z",
+     "flags"
+    ],
+    "title": "PerformerRow"
+   },
+   "PerformersResponse": {
+    "properties": {
+     "ids": {
+      "$ref": "#/components/schemas/ResponseIds"
+     },
+     "manager_id": {
+      "type": "string",
+      "title": "Manager Id"
+     },
+     "scope": {
+      "type": "string",
+      "enum": [
+       "week",
+       "season"
+      ],
+      "title": "Scope"
+     },
+     "period": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Period"
+     },
+     "periods_available": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Periods Available"
+     },
+     "baseline": {
+      "type": "string",
+      "title": "Baseline"
+     },
+     "source": {
+      "type": "string",
+      "title": "Source"
+     },
+     "contributors": {
+      "items": {
+       "$ref": "#/components/schemas/PerformerRow"
+      },
+      "type": "array",
+      "title": "Contributors"
+     },
+     "overperformers": {
+      "items": {
+       "$ref": "#/components/schemas/PerformerRow"
+      },
+      "type": "array",
+      "title": "Overperformers"
+     },
+     "notes": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Notes"
+     }
+    },
+    "type": "object",
+    "required": [
+     "ids",
+     "manager_id",
+     "scope",
+     "period",
+     "periods_available",
+     "baseline",
+     "source",
+     "contributors",
+     "overperformers",
+     "notes"
+    ],
+    "title": "PerformersResponse"
+   },
    "PickRecordView": {
     "properties": {
      "overall": {
@@ -3555,6 +3877,17 @@
        }
       ],
       "title": "Team"
+     },
+     "espn_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Espn Id"
      },
      "primary_position": {
       "anyOf": [

@@ -218,3 +218,13 @@ day, then frozen exactly as last written, so roster moves after the fact cannot 
 `GET /season/predictions` scores frozen rows against ESPN's decided winner (ESPN's `winner`, or
 category wins once the window has passed): hit rate and Brier score (0.25 = coin flip). A projected
 winner is the side with the higher P(win week), ties broken by expected categories.
+
+## DEC-29 — 2026-10-23 — Team performers measure what ESPN counted, on the project's category scale
+"Contribution" uses ESPN's applied per-player box score for each matchup period (`mBoxscore`,
+addressed by a scoring period inside the matchup period), stored per sync in `period_player_stats`
+and never recomputed from NBA game logs, so it matches the team's actual weekly result including
+daily lineup decisions. Value is per-game production in category-standard-deviation units
+(`performance._per_game_scale`, uncentered so a player who did not play is exactly zero) x games
+counted. The overperformance baseline is the snapshot's per-game projection x games actually played;
+no other projection is substituted, and prior-only players are flagged "no baseline" and left
+unranked. Season-to-date sums the stored periods.

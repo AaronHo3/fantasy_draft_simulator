@@ -17,6 +17,7 @@ from app.sources.espn_league import EspnLeague
 
 LeagueFetcher = Callable[[int, int], tuple[EspnLeague, dict[str, Any]]]
 PlayersFetcher = Callable[[int], pd.DataFrame]
+BoxscoreFetcher = Callable[[int, int, int], dict[str, Any]]
 
 
 def _default_fetch_league(league_id: int, season_id: int) -> tuple[EspnLeague, dict[str, Any]]:
@@ -27,6 +28,12 @@ def _default_fetch_league(league_id: int, season_id: int) -> tuple[EspnLeague, d
     raw = fetch_league_raw(league_id, season_id)
     fetched_at = datetime.now(UTC).isoformat(timespec="seconds")
     return parse_league(raw.payload, league_id, season_id, fetched_at), raw.payload
+
+
+def _default_fetch_boxscore(league_id: int, season_id: int, scoring_period_id: int) -> dict[str, Any]:
+    from app.sources.espn_league import fetch_boxscore_raw
+
+    return fetch_boxscore_raw(league_id, season_id, scoring_period_id)
 
 
 def _default_fetch_players(season_id: int) -> pd.DataFrame:
@@ -43,6 +50,7 @@ class AppContext:
     jobs: JobManager
     espn_fetch_league: LeagueFetcher = _default_fetch_league
     espn_fetch_players: PlayersFetcher = _default_fetch_players
+    espn_fetch_boxscore: BoxscoreFetcher = _default_fetch_boxscore
     leagues: dict[int, EspnLeague] = field(default_factory=dict)  # last parsed league per league id
     _schedule: pd.DataFrame | None = field(default=None, repr=False)
     _schedule_loaded: bool = False

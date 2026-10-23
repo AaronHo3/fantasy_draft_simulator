@@ -469,6 +469,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sessions/{session_id}/season/performers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Season Performers */
+        get: operations["season_performers_api_sessions__session_id__season_performers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1188,6 +1205,75 @@ export interface components {
             ids: components["schemas"]["ResponseIds"];
             odds: components["schemas"]["MatchupOddsView"];
         };
+        /** PerformerRow */
+        PerformerRow: {
+            /** Rank */
+            rank: number;
+            player: components["schemas"]["PlayerView"];
+            /** Games */
+            games: number;
+            /** Periods */
+            periods: number;
+            /** Minutes */
+            minutes: number;
+            /** Contribution */
+            contribution: number;
+            /** Contribution Per Game */
+            contribution_per_game: number | null;
+            /** Expected Contribution */
+            expected_contribution: number | null;
+            /** Over Expected */
+            over_expected: number | null;
+            /** Over Expected Per Game */
+            over_expected_per_game: number | null;
+            /** Actual */
+            actual: {
+                [key: string]: number | null;
+            };
+            /** Expected */
+            expected: {
+                [key: string]: number | null;
+            } | null;
+            /** Actual Per Game */
+            actual_per_game: {
+                [key: string]: number | null;
+            };
+            /** Expected Per Game */
+            expected_per_game: {
+                [key: string]: number | null;
+            } | null;
+            /** Category Z */
+            category_z: {
+                [key: string]: number;
+            };
+            /** Flags */
+            flags: string[];
+        };
+        /** PerformersResponse */
+        PerformersResponse: {
+            ids: components["schemas"]["ResponseIds"];
+            /** Manager Id */
+            manager_id: string;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "week" | "season";
+            /** Period */
+            period: number | null;
+            /** Periods Available */
+            periods_available: number[];
+            /** Baseline */
+            baseline: string;
+            /** Source */
+            source: string;
+            /** Contributors */
+            contributors: components["schemas"]["PerformerRow"][];
+            /** Overperformers */
+            overperformers: components["schemas"]["PerformerRow"][];
+            /** Notes */
+            notes: string[];
+        };
         /** PickRecordView */
         PickRecordView: {
             /** Overall */
@@ -1226,6 +1312,8 @@ export interface components {
             name: string;
             /** Team */
             team: string | null;
+            /** Espn Id */
+            espn_id?: number | null;
             /** Primary Position */
             primary_position: string | null;
             /** Eligible Positions */
@@ -2808,6 +2896,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PredictionsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    season_performers_api_sessions__session_id__season_performers_get: {
+        parameters: {
+            query: {
+                manager_id: string;
+                period?: number | null;
+            };
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PerformersResponse"];
                 };
             };
             /** @description Validation Error */

@@ -23,12 +23,13 @@ from app.recommend import service as svc
 from app.season.free_agents import free_agents as rank_free_agents
 from app.season.link import match_teams
 from app.season.live_status import status_overlay, write_live_status
+from app.season.performers import BASELINE_LABEL, rank_performers
 from app.season.power import matchup_odds, power_rankings
 from app.season.results import week_results
 from app.season.sync import SyncPlan, plan_sync
-from app.season.weeks import calendar_matches_espn, current_period, period_window
+from app.season.weeks import calendar_matches_espn, current_period, first_scoring_period_id, period_window
 from app.sources.base import FetchError, SchemaError
-from app.sources.espn_league import EspnLeague, LeagueAccessError, parse_league, settings_diff
+from app.sources.espn_league import EspnLeague, LeagueAccessError, parse_boxscore, parse_league, settings_diff
 
 log = logging.getLogger(__name__)
 
@@ -263,6 +264,7 @@ def run_sync(ctx: AppContext, session_id: str, expected_revision: int | None) ->
     pairs_now = _pairs(ctx, snap, new_state, league, period_now, ctx.settings.default_seed)
     if pairs_now:
         record_predictions(ctx, session_id, new_state, pairs_now, period_now)
+    _refresh_period_stats(ctx, session_id, period_now, warnings)
     ctx.store.set_sync(
         session_id,
         {
@@ -303,6 +305,99 @@ def run_sync(ctx: AppContext, session_id: str, expected_revision: int | None) ->
         warnings=warnings,
         unknown_players=[S.UnknownPlayerView(espn_id=e, name=n) for e, n in plan.unknown_players],
         state=svc.state_view(new_state),
+    )
+
+
+# --- applied box scores per matchup period --------------------------------------------------------
+
+
+def store_period_stats(ctx: AppContext, session_id: str, period: int) -> int:
+    """Fetch ESPN's applied box score for ``period`` and store one row per rostered player. Returns rows stored."""
+    meta, state = _session(ctx, session_id)
+    league_id = state.league.espn_league_id
+    if league_id is None or period < 1:
+        return 0
+    snap = _snapshot(ctx, meta)
+    by_espn = {p.espn_id: p.player_id for p in snap.players if p.espn_id}
+    t2m = _team_to_manager(state)
+    payload = ctx.espn_fetch_boxscore(
+        league_id, espn_season_id(state.league.season), first_scoring_period_id(state.league.season, period)
+    )
+    teams = parse_boxscore(payload, period)
+    now = now_iso()
+    records = []
+    for team_id, rows in teams.items():
+        mid = t2m.get(team_id)
+        if mid is None:
+            continue
+        for r in rows:
+            records.append(
+                {
+                    "period": period,
+                    "manager_id": mid,
+                    "player_id": by_espn.get(r.espn_player_id, f"espn:{r.espn_player_id}"),
+                    "espn_id": r.espn_player_id,
+                    "name": r.name,
+                    "lineup_slot_id": r.lineup_slot_id,
+                    "games": r.games,
+                    "minutes": r.minutes,
+                    "stats": r.stats,
+                    "source": "espn_boxscore",
+                    "fetched_at": now,
+                }
+            )
+    if records:
+        ctx.store.upsert_period_player_stats(session_id, records)
+    return len(records)
+
+
+def _refresh_period_stats(ctx: AppContext, session_id: str, period: int, warnings: list[str]) -> None:
+    """Current period and the one before it (its final numbers settle after the week ends)."""
+    for p in (period - 1, period):
+        if p < 1:
+            continue
+        try:
+            store_period_stats(ctx, session_id, p)
+        except Exception as e:  # noqa: BLE001 - box scores are an add-on to the sync, never block it
+            log.warning("ESPN box score for period %s not stored: %s", p, e)
+            warnings.append(f"ESPN box score for week {p} not refreshed ({e})")
+
+
+def performers(ctx: AppContext, session_id: str, manager_id: str, period: int | None) -> S.PerformersResponse:
+    meta, state = _session(ctx, session_id)
+    if manager_id not in {m.id for m in state.league.managers}:
+        raise SeasonError(422, "unknown_manager", f"unknown manager {manager_id}")
+    snap = _snapshot(ctx, meta)
+    available = ctx.store.periods_with_stats(session_id)
+    records = ctx.store.period_player_stats(session_id, period=period, manager_id=manager_id)
+    notes: list[str] = []
+    if period is not None and period not in available:
+        notes.append(f"no ESPN box scores stored for week {period} (sync while or after that week to capture it)")
+    if not records and period is None:
+        notes.append("no ESPN box scores stored yet: run a sync during a matchup week")
+    contributors, overperformers = rank_performers(snap, state, records)
+
+    def view(row: dict, rank: int) -> S.PerformerRow:
+        pid = row.pop("player_id")
+        player = svc.player_view(snap, snap.index[pid], state)
+        return S.PerformerRow(rank=rank, player=player, **row)
+
+    c_rows = [view(dict(r), i + 1) for i, r in enumerate(contributors)]
+    o_rows = [view(dict(r), i + 1) for i, r in enumerate(overperformers)]
+    unknown = [r["name"] for r in records if r["player_id"] not in snap.index]
+    if unknown:
+        notes.append(f"not in the projection snapshot (no baseline, not ranked): {', '.join(sorted(set(unknown)))}")
+    return S.PerformersResponse(
+        ids=svc.response_ids(state, snap, ctx.settings.default_seed),
+        manager_id=manager_id,
+        scope="week" if period is not None else "season",
+        period=period,
+        periods_available=available,
+        baseline=BASELINE_LABEL,
+        source="ESPN applied box scores per matchup period (what counted for the fantasy team that week)",
+        contributors=c_rows,
+        overperformers=o_rows,
+        notes=notes,
     )
 
 

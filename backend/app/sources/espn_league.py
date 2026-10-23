@@ -131,6 +131,75 @@ class EspnTransaction:
         return self.status == "EXECUTED" and any(it.kind in ROSTER_MOVE_KINDS for it in self.items)
 
 
+BOXSCORE_STAT_IDS = {
+    0: "PTS",
+    6: "REB",
+    3: "AST",
+    2: "STL",
+    1: "BLK",
+    11: "TOV",
+    17: "FG3M",
+    18: "FG3A",
+    13: "FGM",
+    14: "FGA",
+    15: "FTM",
+    16: "FTA",
+}
+BOXSCORE_GAMES_ID, BOXSCORE_MINUTES_ID = 42, 40
+
+
+@dataclass(frozen=True)
+class PlayerPeriodStats:
+    """A player's stats as ESPN applied them to a fantasy team for one matchup period."""
+
+    espn_player_id: int
+    name: str
+    lineup_slot_id: int
+    games: int
+    minutes: float
+    stats: dict[str, float]  # keys of BOXSCORE_STAT_IDS
+
+
+def parse_boxscore(payload: dict[str, Any], period: int) -> dict[int, list[PlayerPeriodStats]]:
+    """mBoxscore view (requested with a scoringPeriodId inside ``period``) -> team id -> applied player stats.
+
+    Matchup entries that have no ``rosterForMatchupPeriod`` yet (future periods) are skipped, so an
+    empty dict means ESPN has nothing applied for that period.
+    """
+    out: dict[int, list[PlayerPeriodStats]] = {}
+    for m in payload.get("schedule", []):
+        if int(m.get("matchupPeriodId", -1)) != period:
+            continue
+        for side in ("home", "away"):
+            s = m.get(side)
+            if not isinstance(s, dict) or s.get("teamId") is None or "rosterForMatchupPeriod" not in s:
+                continue
+            rows = []
+            for e in (s.get("rosterForMatchupPeriod") or {}).get("entries", []):
+                pl = (e.get("playerPoolEntry") or {}).get("player") or {}
+                blocks = pl.get("stats") or []
+                raw = (blocks[0].get("stats") or {}) if blocks else {}
+
+                def num(k: int) -> float:
+                    try:
+                        return float(raw.get(str(k), 0) or 0)
+                    except (TypeError, ValueError):
+                        return 0.0
+
+                rows.append(
+                    PlayerPeriodStats(
+                        espn_player_id=int(e.get("playerId", pl.get("id", 0))),
+                        name=str(pl.get("fullName", "")),
+                        lineup_slot_id=int(e.get("lineupSlotId", -1)),
+                        games=int(num(BOXSCORE_GAMES_ID)),
+                        minutes=num(BOXSCORE_MINUTES_ID),
+                        stats={key: num(sid) for sid, key in BOXSCORE_STAT_IDS.items()},
+                    )
+                )
+            out[int(s["teamId"])] = rows
+    return out
+
+
 @dataclass(frozen=True)
 class EspnLeague:
     league_id: int
@@ -372,6 +441,18 @@ def fetch_league_raw(league_id: int, season_id: int, client: httpx.Client | None
         raise SchemaError("ESPN league response lacks teams")
     _merge_next_period_rosters(raw.payload, league_id, season_id, client)
     return raw
+
+
+def fetch_boxscore_raw(
+    league_id: int, season_id: int, scoring_period_id: int, client: httpx.Client | None = None
+) -> dict[str, Any]:
+    """mBoxscore for the matchup period containing ``scoring_period_id`` (applied per-player stats)."""
+    raw = _get_league(
+        league_url(league_id, season_id), {"view": ["mBoxscore"], "scoringPeriodId": scoring_period_id}, client
+    )
+    if not isinstance(raw.payload, dict) or "schedule" not in raw.payload:
+        raise SchemaError("ESPN boxscore response lacks schedule")
+    return raw.payload
 
 
 def fetch_league(league_id: int, season_id: int, client: httpx.Client | None = None) -> EspnLeague:

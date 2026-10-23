@@ -81,3 +81,8 @@ def games_in_window(schedule: pd.DataFrame, start: date, end: date) -> dict[str,
         for team, n in rows[col].value_counts().items():
             counts[str(team)] = counts.get(str(team), 0) + int(n)
     return counts
+
+
+def first_scoring_period_id(season: str, period: int) -> int:
+    """ESPN scoring periods are days numbered from opening night (1); the first day of a matchup period."""
+    return (period_window(season, period)[0] - season_start(season)).days + 1

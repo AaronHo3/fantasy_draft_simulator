@@ -48,6 +48,7 @@ def player_view(snap: Snapshot, i: int, state: DraftState | None = None) -> S.Pl
         player_id=p.player_id,
         name=p.name,
         team=p.team,
+        espn_id=p.espn_id,
         primary_position=p.primary_position,
         eligible_positions=sorted(p.eligible_positions),
         eligibility_source=p.eligibility_source,

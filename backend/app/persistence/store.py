@@ -29,6 +29,12 @@ CREATE TABLE IF NOT EXISTS season_predictions (
   PRIMARY KEY (session_id, period, home_manager_id),
   FOREIGN KEY (session_id) REFERENCES sessions(id)
 );
+CREATE TABLE IF NOT EXISTS period_player_stats (
+  session_id TEXT NOT NULL, period INTEGER NOT NULL, manager_id TEXT NOT NULL, player_id TEXT NOT NULL,
+  record_json TEXT NOT NULL,
+  PRIMARY KEY (session_id, period, manager_id, player_id),
+  FOREIGN KEY (session_id) REFERENCES sessions(id)
+);
 CREATE TABLE IF NOT EXISTS session_sync (
   session_id TEXT PRIMARY KEY, league_id INTEGER, fetched_at TEXT, summary TEXT, record_json TEXT NOT NULL,
   FOREIGN KEY (session_id) REFERENCES sessions(id)
@@ -132,6 +138,7 @@ class SessionStore:
             self._conn.execute("DELETE FROM events WHERE session_id=?", (session_id,))
             self._conn.execute("DELETE FROM session_sync WHERE session_id=?", (session_id,))
             self._conn.execute("DELETE FROM season_predictions WHERE session_id=?", (session_id,))
+            self._conn.execute("DELETE FROM period_player_stats WHERE session_id=?", (session_id,))
             self._conn.execute("DELETE FROM sessions WHERE id=?", (session_id,))
             self._conn.execute("COMMIT")
             self._state_cache.pop(session_id, None)
@@ -167,6 +174,42 @@ class SessionStore:
             (session_id,),
         ).fetchall()
         return [json.loads(r[0]) for r in rows]
+
+    # --- per-period applied player stats (ESPN box scores; history kept for every synced week) -----
+    def upsert_period_player_stats(self, session_id: str, records: list[dict[str, Any]]) -> None:
+        with self._lock:
+            self._conn.execute("BEGIN")
+            try:
+                for rec in records:
+                    self._conn.execute(
+                        "INSERT INTO period_player_stats VALUES (?,?,?,?,?) "
+                        "ON CONFLICT(session_id, period, manager_id, player_id) DO UPDATE SET record_json=excluded.record_json",
+                        (session_id, int(rec["period"]), rec["manager_id"], rec["player_id"], json.dumps(rec)),
+                    )
+                self._conn.execute("COMMIT")
+            except Exception:
+                self._conn.execute("ROLLBACK")
+                raise
+
+    def period_player_stats(
+        self, session_id: str, period: int | None = None, manager_id: str | None = None
+    ) -> list[dict[str, Any]]:
+        sql = "SELECT record_json FROM period_player_stats WHERE session_id=?"
+        args: list[Any] = [session_id]
+        if period is not None:
+            sql += " AND period=?"
+            args.append(int(period))
+        if manager_id is not None:
+            sql += " AND manager_id=?"
+            args.append(manager_id)
+        sql += " ORDER BY period, manager_id, player_id"
+        return [json.loads(r[0]) for r in self._conn.execute(sql, args).fetchall()]
+
+    def periods_with_stats(self, session_id: str) -> list[int]:
+        rows = self._conn.execute(
+            "SELECT DISTINCT period FROM period_player_stats WHERE session_id=? ORDER BY period", (session_id,)
+        ).fetchall()
+        return [int(r[0]) for r in rows]
 
     def get_sync(self, session_id: str) -> dict[str, Any] | None:
         r = self._conn.execute("SELECT record_json FROM session_sync WHERE session_id=?", (session_id,)).fetchone()

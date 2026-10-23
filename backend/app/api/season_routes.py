@@ -78,3 +78,13 @@ def season_results(
 @router.get("/sessions/{session_id}/season/predictions", response_model=S.PredictionsResponse)
 def season_predictions(session_id: str, ctx: AppContext = Depends(get_context)):
     return _run(season.predictions, ctx, session_id)
+
+
+@router.get("/sessions/{session_id}/season/performers", response_model=S.PerformersResponse)
+def season_performers(
+    session_id: str,
+    manager_id: str = Query(min_length=1),
+    period: int | None = Query(default=None, ge=1, le=22),
+    ctx: AppContext = Depends(get_context),
+):
+    return _run(season.performers, ctx, session_id, manager_id, period)
