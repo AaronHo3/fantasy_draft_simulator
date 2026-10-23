@@ -82,21 +82,34 @@ def fetch_league(ctx: AppContext, league_id: int, season: str) -> EspnLeague:
     return league
 
 
+def _file_fetched_at(path) -> str | None:
+    """Cheap peek at the fetched_at of the payload on disk (the file starts with that key)."""
+    try:
+        with path.open() as fh:
+            head = fh.read(200)
+        return json.loads(head.split(', "payload"')[0] + "}").get("fetched_at")
+    except (OSError, ValueError):
+        return None
+
+
 def cached_league(ctx: AppContext, league_id: int, season: str) -> EspnLeague | None:
-    """The last synced league: in memory, else re-parsed from the raw payload written by sync."""
+    """The last synced league. Another process (the CLI, auto-refresh in a second server) may have
+    synced since this one did, so the file wins whenever it is newer than the in-memory copy."""
     hit = ctx.leagues.get(league_id)
-    if hit is not None:
-        return hit
     path = _league_file(ctx, league_id)
     if not path.exists():
-        return None
+        return hit
+    on_disk = _file_fetched_at(path)
+    if hit is not None and (on_disk is None or on_disk <= hit.fetched_at):
+        return hit
     try:
         doc = json.loads(path.read_text())
         league = parse_league(doc["payload"], league_id, espn_season_id(season), doc["fetched_at"])
     except (OSError, ValueError, KeyError, SchemaError) as e:
         log.warning("cached league payload unreadable: %s", e)
-        return None
+        return hit
     ctx.leagues[league_id] = league
+    ctx.invalidate_live_status(league_id)
     return league
 
 
@@ -482,11 +495,14 @@ def overview(ctx: AppContext, session_id: str, seed: int | None, period: int | N
         record_predictions(ctx, session_id, state, pairs, period_n)
     uid = state.league.user_manager_id
     user_pair = next((p for p in pairs if uid in (p.home_manager_id, p.away_manager_id)), None)
+    synced_at = (rec or {}).get("fetched_at")
+    if league is not None and (synced_at is None or league.fetched_at > synced_at):
+        synced_at = league.fetched_at
     return S.SeasonOverview(
         ids=svc.response_ids(state, snap, seed),
         linked=league_id is not None,
         league_name=league.settings.name if league else None,
-        synced_at=(rec or {}).get("fetched_at"),
+        synced_at=synced_at,
         summary=(rec or {}).get("summary"),
         warnings=list((rec or {}).get("warnings") or []),
         current_period=period_n,

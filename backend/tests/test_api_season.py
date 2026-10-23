@@ -773,3 +773,25 @@ def test_predictions_scored_against_espn_results(client, complete_session, monke
     assert s["hit_rate"] == pytest.approx(s["n_correct"] / 1) and 0 <= s["brier"] <= 1
     bye = next(p for p in body["predictions"] if p["period"] == 1 and p["away_manager_id"] is None)
     assert bye["predicted_winner"] is None and bye["actual_winner"] is None
+
+
+def test_cached_league_reloads_when_a_newer_payload_was_written(client, complete_session):
+    """A CLI sync writes league.json from another process; the app must not keep serving its older copy."""
+    from app.season import service as season
+
+    sid = complete_session
+    first = league_from_state(client, sid, fetched_at="2026-10-19T04:00:00+00:00", matchups=week1())
+    install_fakes(client, first)
+    link(client, sid)
+    assert client.post(f"/api/sessions/{sid}/espn/sync", json={}).status_code == 200
+    ctx = client.app.state.ctx
+    assert season.cached_league(ctx, LEAGUE_ID, "2026-27").fetched_at == "2026-10-19T04:00:00+00:00"
+    # another process syncs later and writes a newer payload to disk
+    newer = league_from_state(client, sid, fetched_at="2026-10-23T07:43:00+00:00", matchups=week1())
+    path = ctx.settings.live_dir / str(LEAGUE_ID) / "league.json"
+    import json as _json
+
+    path.write_text(_json.dumps({"fetched_at": newer.fetched_at, "payload": raw_from_league(newer)}))
+    assert season.cached_league(ctx, LEAGUE_ID, "2026-27").fetched_at == "2026-10-23T07:43:00+00:00"
+    # and the overview reports the newer sync time even though this process did not run it
+    assert client.get(f"/api/sessions/{sid}/season/overview").json()["synced_at"] == "2026-10-23T07:43:00+00:00"
