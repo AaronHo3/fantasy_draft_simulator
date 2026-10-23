@@ -1,5 +1,19 @@
 # Progress
 
+## 2026-10-23 — Team performers, performance tracker, live scores (DEC-28, DEC-29)
+- **Performers** tab: ESPN applied box scores per matchup period stored by every sync
+  (`period_player_stats`; current and previous week), contribution and over-expectation leaderboards,
+  sortable detail table with per-category breakdown, explainer with the league's unit sizes, ESPN
+  headshots with initials fallback. `GET /season/performers`.
+- `make performance`: week-by-week actual-vs-projection CSV/XLSX tracker and free-agent hot starts.
+- ESPN feed fixes found in use: next-period roster view for same-day moves; `mMatchup` (not
+  `mSchedule`) carries scores; `cumulativeScoreLive` via `mMatchupScore` is the live scoreboard;
+  cached league reloads when another process synced; weekly projections frozen at week start
+  (Track record tab).
+- Daily lineups: season sims count every available player on his game days, best players first on
+  crowded days; OUT / no-team players never start; teamless players are the default drop.
+- Verified: backend 239 tests, frontend 47, Playwright 4; live on league 2075231076.
+
 ## 2026-10-19 — ESPN league link and in-season tracking (DEC-24..27)
 Spec `docs/superpowers/specs/2026-10-19-espn-league-link-design.md`, plan
 `docs/superpowers/plans/2026-10-19-espn-league-link.md`, branch `feat/espn-league-link`.

@@ -25,9 +25,14 @@ frontend/coverage/
 *.log
 # playwright / browser artifacts
 .playwright-mcp/
-frontend/test-results/
-frontend/playwright-report/
-# local analysis exports
+test-results/
+playwright-report/
+# stray installs outside frontend/
+backend/node_modules/
+backend/package.json
+backend/package-lock.json
+# local analysis exports and per-league live data
 exports/
+*.xlsx
 # superpowers scratch
 .superpowers/
