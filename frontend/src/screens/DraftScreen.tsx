@@ -11,6 +11,9 @@ import { Scoreboard } from '../components/draft/Scoreboard'
 import { ShortlistTable } from '../components/draft/ShortlistTable'
 import { StrategyPanel } from '../components/draft/StrategyPanel'
 import { TeamsPanel } from '../components/draft/TeamsPanel'
+import { HowItWorks } from '../components/ui/HowItWorks'
+import { Segmented } from '../components/ui/Segmented'
+import { EmptyState, ErrorState, LoadingState } from '../components/ui/States'
 import { buildUrl } from '../lib/router'
 import { selectRecCurrent, useDraftStore } from '../store/draftStore'
 
@@ -19,6 +22,7 @@ type WorkTab = 'recommendations' | 'players'
 type SideTab = 'roster' | 'categories' | 'strategy' | 'teams'
 type MobilePane = 'find' | 'picks' | 'mine'
 
+/** Draft night control room: status strip, picker, recommendation hero and shortlist, my team. */
 export function DraftScreen() {
   const sessionId = useDraftStore((s) => s.sessionId)
   const stateStatus = useDraftStore((s) => s.stateStatus)
@@ -39,51 +43,56 @@ export function DraftScreen() {
 
   if (!sessionId) {
     return (
-      <div className="empty-state" style={{ marginTop: 24 }}>
-        <b>No draft open.</b>
-        <p style={{ marginTop: 6 }}>
-          <a href={buildUrl('setup', null)}>Create a league or resume a saved draft</a> to start recording picks.
-        </p>
-      </div>
+      <EmptyState title="No draft open" action={<a href={buildUrl('setup', null)}>Create a league or resume a saved draft</a>}>
+        Picks are recorded against a session; start one in Setup.
+      </EmptyState>
     )
   }
   if (stateStatus === 'error') {
     return (
-      <div className="callout error" role="alert">
-        <p>
-          Could not load draft {sessionId}: {stateError}
-        </p>
-        <button type="button" onClick={() => void refreshState()}>
-          Try again
-        </button>{' '}
-        <a href={buildUrl('setup', null)}>Back to setup</a>
-      </div>
+      <ErrorState
+        title={`Could not load draft ${sessionId}`}
+        action={
+          <>
+            <button type="button" onClick={() => void refreshState()}>
+              Try again
+            </button>
+            <a href={buildUrl('setup', null)}>Back to setup</a>
+          </>
+        }
+      >
+        {stateError}
+      </ErrorState>
     )
   }
-  if (!hasState) return <p className="muted">Loading draft…</p>
+  if (!hasState) return <LoadingState title="Loading draft" />
 
   return (
     <>
       <Scoreboard />
-      {!formatConfirmed && (
-        <div className="callout warn" role="alert" data-testid="format-warning" style={{ marginBottom: 8 }}>
-          Scoring format not confirmed: rankings assume <b>{scoringFormat}</b>.{' '}
-          <button type="button" className="small" onClick={() => void confirmFormat()}>
-            Confirm format
-          </button>{' '}
-          or change it in <a href={buildUrl('setup', sessionId)}>Setup</a>.
-        </div>
-      )}
-      {warnings.length > 0 && (
-        <div className="callout warn" role="status" style={{ marginBottom: 8 }}>
-          {warnings.map((w) => (
-            <div key={w}>{w}</div>
-          ))}
-        </div>
-      )}
-      {isComplete && (
-        <div className="callout ok" role="status" style={{ marginBottom: 8 }}>
-          Every pick is recorded. <a href={buildUrl('recap', sessionId)}>Open the recap</a> for final rosters and your category profile.
+      {(!formatConfirmed || warnings.length > 0 || isComplete) && (
+        <div className="draft-notices">
+          {!formatConfirmed && (
+            <div className="callout warn" role="alert" data-testid="format-warning">
+              Scoring format not confirmed: rankings assume <b>{scoringFormat}</b>.{' '}
+              <button type="button" className="small" onClick={() => void confirmFormat()}>
+                Confirm format
+              </button>{' '}
+              or change it in <a href={buildUrl('setup', sessionId)}>Setup</a>.
+            </div>
+          )}
+          {warnings.length > 0 && (
+            <div className="callout warn" role="status">
+              {warnings.map((w) => (
+                <div key={w}>{w}</div>
+              ))}
+            </div>
+          )}
+          {isComplete && (
+            <div className="callout ok" role="status">
+              Every pick is recorded. <a href={buildUrl('recap', sessionId)}>Open the recap</a> for final rosters and your category profile.
+            </div>
+          )}
         </div>
       )}
       <div className="mobile-tabs" role="tablist" aria-label="Sections">
@@ -101,36 +110,34 @@ export function DraftScreen() {
         <aside className="col-picker" data-mobile-hidden={pane !== 'find'}>
           <PlayerPicker />
         </aside>
-        <main className="col-work" data-mobile-hidden={pane !== 'picks'}>
+        <div className="col-work" data-mobile-hidden={pane !== 'picks'}>
           <RecommendationCard />
           <section className="panel" aria-label="Player workspace">
-            <div className="tabs" role="tablist">
-              <button type="button" role="tab" aria-selected={workTab === 'recommendations'} onClick={() => setWorkTab('recommendations')} data-testid="tab-recommendations">
-                Recommendations{shortlistCount !== null && <span className="count">{shortlistCount}</span>}
-              </button>
-              <button type="button" role="tab" aria-selected={workTab === 'players'} onClick={() => setWorkTab('players')} data-testid="tab-players">
-                All players{playersStatus === 'loading' ? <span className="count">loading…</span> : ''}
-              </button>
-            </div>
+            <Segmented<WorkTab>
+              label="Workspace"
+              value={workTab}
+              onChange={setWorkTab}
+              options={[
+                { id: 'recommendations', label: 'Recommendations', count: shortlistCount ?? undefined, testId: 'tab-recommendations' },
+                { id: 'players', label: 'All players', count: playersStatus === 'loading' ? 'loading…' : undefined, testId: 'tab-players' },
+              ]}
+            />
             {workTab === 'recommendations' ? <ShortlistTable /> : <AllPlayersTable />}
           </section>
-        </main>
+        </div>
         <aside className="col-side" data-mobile-hidden={pane !== 'mine'}>
           <section className="panel" aria-label="My team and strategy">
-            <div className="tabs" role="tablist">
-              <button type="button" role="tab" aria-selected={sideTab === 'roster'} onClick={() => setSideTab('roster')} data-testid="tab-roster">
-                My roster
-              </button>
-              <button type="button" role="tab" aria-selected={sideTab === 'categories'} onClick={() => setSideTab('categories')} data-testid="tab-categories">
-                Categories
-              </button>
-              <button type="button" role="tab" aria-selected={sideTab === 'strategy'} onClick={() => setSideTab('strategy')} data-testid="tab-strategy">
-                Strategy{activePunts > 0 && <span className="count">{activePunts} punt{activePunts > 1 ? 's' : ''}</span>}
-              </button>
-              <button type="button" role="tab" aria-selected={sideTab === 'teams'} onClick={() => setSideTab('teams')} data-testid="tab-teams">
-                Teams
-              </button>
-            </div>
+            <Segmented<SideTab>
+              label="My team"
+              value={sideTab}
+              onChange={setSideTab}
+              options={[
+                { id: 'roster', label: 'Roster', testId: 'tab-roster' },
+                { id: 'categories', label: 'Categories', testId: 'tab-categories' },
+                { id: 'strategy', label: 'Strategy', count: activePunts > 0 ? `${activePunts} punt${activePunts > 1 ? 's' : ''}` : undefined, testId: 'tab-strategy' },
+                { id: 'teams', label: 'Teams', testId: 'tab-teams' },
+              ]}
+            />
             {sideTab === 'roster' && <RosterPanel />}
             {sideTab === 'categories' && <CategoryProfileTable />}
             {sideTab === 'strategy' && <StrategyPanel />}
@@ -139,6 +146,9 @@ export function DraftScreen() {
         </aside>
       </div>
       <HistoryDrawer />
+      <div style={{ marginTop: 16 }}>
+        <HowItWorks />
+      </div>
       <PlayerDrawer />
       <CompareView />
     </>

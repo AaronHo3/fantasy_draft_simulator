@@ -24,6 +24,27 @@ Open the frontend URL. The **Setup** screen lets you:
 Create the session; the URL now carries `?session=<id>` and the id is also kept in the browser, so
 reloading or reopening the tab restores it. The Setup screen lists existing sessions to resume.
 
+## The interface
+
+The app is a single workspace: a charcoal sidebar on the left (Setup, Draft, Season, Performers,
+Recap, Data health; Season and Performers appear once the draft is complete) with the open session,
+linked league and last sync pinned at the bottom, and a page on the right with its title, context
+chips (league, week, data source) and that page's own filters directly under the title. Page
+selections such as the Season tab, the Performers team/week and the matchup period are kept in the
+URL hash, so a reload or a shared link lands on the same view. Under 1180 px the sidebar collapses
+to an icon rail; on a phone it becomes a bottom tab bar.
+
+Colour has one meaning everywhere: teal is an action or a selection, amber marks what is yours
+(your picks, your column, the team on the clock), green/red mark favoured/unfavoured and above/below
+expectation, grey and hatched fills are projections, and NBA team colours identify players in
+portraits, marks and charts. Every chart writes its exact value next to the bar, cell or point, so
+colour is never the only signal; hover or focus any bar, cell or point for the value and its unit.
+A "How this works" section at the bottom of Draft and Season shows the flow from projections and
+rosters to simulated weeks and recommendations.
+
+Demo data is labelled in the sidebar, in the draft status strip and in the page chips; nothing in
+the UI blends it with a real snapshot.
+
 ## Data refresh
 
 ```
@@ -145,6 +166,16 @@ Once the draft is complete a **Season** tab appears.
    session in Setup if you want the simulation to use daily lineups.
 
 ## Team performers
+
+The page opens with a stat row (team contribution, expected, vs expected, games counted), the two
+leaderboards, a diverging chart of every player's performance against expectation, a scatter of
+actual against expected contribution (the dashed diagonal is "exactly as projected"), and the full
+sortable table. Click a bar, point or row to select that player everywhere; a player's name opens a
+drawer with actual vs expected totals, per-game lines, makes/attempts, games counted and the
+per-category units that add up to the headline numbers. "How contribution and expected are
+calculated" sits below the table. A week-by-week trend chart is deliberately left as an
+"unavailable" note: the endpoint returns one scope at a time, so there is no per-player history to
+draw; the week selector steps through weeks instead.
 
 The **Performers** tab (after the draft, once the league is linked) ranks any team's players two ways,
 per week or season to date:

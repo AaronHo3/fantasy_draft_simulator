@@ -1,62 +1,82 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { MatchupPairView } from '../../api/types'
 import { useSeasonStore } from '../../store/seasonStore'
+import { Icon } from '../ui/Icon'
+import { EmptyState } from '../ui/States'
 import { MatchupCard } from './MatchupCard'
 
 const key = (m: MatchupPairView) => `${m.period}:${m.home_manager_id}`
+const PERIODS = Array.from({ length: 22 }, (_, i) => i + 1)
 
 /** The featured card is mine by default; clicking any other card swaps it into the main frame. */
 export function MatchupsTab({ sessionId, userId }: { sessionId: string; userId: string }) {
   const overview = useSeasonStore((s) => s.overview)
+  const results = useSeasonStore((s) => s.results)
   const setPeriod = useSeasonStore((s) => s.setPeriod)
   const loadOverview = useSeasonStore((s) => s.loadOverview)
+  const loadResults = useSeasonStore((s) => s.loadResults)
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const period = overview?.current_period ?? null
+  const synced = Boolean(overview?.synced_at)
+
+  // ESPN running totals for the shown week, so the featured card can show actuals beside the odds.
+  useEffect(() => {
+    if (synced && period !== null) void loadResults(sessionId, period)
+  }, [sessionId, period, synced, loadResults])
+
   if (!overview) return null
   const mine = overview.matchups.find((m) => m.home_manager_id === userId || m.away_manager_id === userId) ?? null
   const featured = overview.matchups.find((m) => key(m) === selectedKey) ?? mine ?? overview.matchups[0] ?? null
   const others = overview.matchups.filter((m) => m !== featured)
-  const periods = Array.from({ length: 22 }, (_, i) => i + 1)
   const label = (m: MatchupPairView) => {
     const home = overview.manager_names[m.home_manager_id] ?? m.home_manager_id
     return m.away_manager_id ? `${home} vs ${overview.manager_names[m.away_manager_id] ?? m.away_manager_id}` : `${home} (bye)`
   }
+  const actualFor = (m: MatchupPairView) =>
+    results && results.period === m.period ? results.results.find((r) => r.home.manager_id === m.home_manager_id || r.away?.manager_id === m.home_manager_id) ?? null : null
   return (
     <div className="stack">
-      <div className="row">
-        <label htmlFor="period">Matchup period</label>
-        <select
-          id="period"
-          value={overview.current_period}
-          onChange={(e) => {
-            const p = Number(e.target.value)
-            setPeriod(p)
-            setSelectedKey(null)
-            void loadOverview(sessionId, p)
-          }}
-        >
-          {periods.map((p) => (
-            <option key={p} value={p}>
-              Week {p}
-              {p === overview.current_period ? ' (current)' : ''}
-            </option>
-          ))}
-        </select>
+      <div className="filter-bar">
+        <span className="field">
+          <label htmlFor="period">Week</label>
+          <select
+            id="period"
+            value={overview.current_period}
+            onChange={(e) => {
+              const p = Number(e.target.value)
+              setPeriod(p)
+              setSelectedKey(null)
+              void loadOverview(sessionId, p)
+            }}
+          >
+            {PERIODS.map((p) => (
+              <option key={p} value={p}>
+                Week {p}
+                {p === overview.current_period ? ' (current)' : ''}
+              </option>
+            ))}
+          </select>
+        </span>
         {featured && mine && featured !== mine && (
           <button type="button" className="small" onClick={() => setSelectedKey(null)}>
-            Back to my matchup
+            <Icon name="chevron-left" size={13} /> Back to my matchup
           </button>
         )}
+        <span className="status">{others.length + (featured ? 1 : 0)} pairings · click a card to feature it</span>
       </div>
       {featured ? (
-        <div data-testid="featured-matchup">
-          <MatchupCard pair={featured} names={overview.manager_names} categories={overview.league_categories} userId={userId} />
+        <div data-testid="featured-matchup" className="featured">
+          <MatchupCard pair={featured} names={overview.manager_names} categories={overview.league_categories} userId={userId} actual={actualFor(featured)} />
         </div>
       ) : (
-        <p className="muted">No ESPN pairings for this period yet.</p>
+        <EmptyState title="No ESPN pairings for this week yet">Sync after ESPN publishes the schedule for this matchup period.</EmptyState>
       )}
       {others.length > 0 && (
         <>
-          <h3 style={{ marginTop: 8 }}>Other matchups <span className="muted">(click one to feature it)</span></h3>
+          <div className="section-title">
+            <h2>Other matchups</h2>
+            <span className="muted">click one to feature it</span>
+          </div>
           <div className="matchup-grid" data-testid="other-matchups">
             {others.map((m) => (
               <div

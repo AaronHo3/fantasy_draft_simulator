@@ -7,6 +7,12 @@ import { PowerTab } from '../components/season/PowerTab'
 import { PredictionsTab } from '../components/season/PredictionsTab'
 import { ResultsTab } from '../components/season/ResultsTab'
 import { SyncBar } from '../components/season/SyncBar'
+import { HowItWorks } from '../components/ui/HowItWorks'
+import { PageHeader, type ContextChip } from '../components/ui/PageHeader'
+import { Segmented } from '../components/ui/Segmented'
+import { EmptyState, ErrorState, LoadingState } from '../components/ui/States'
+import { fmtDate } from '../lib/format'
+import { readHashQuery, replaceHashQuery } from '../lib/hashQuery'
 import { buildUrl } from '../lib/router'
 import { useDraftStore } from '../store/draftStore'
 import { useSeasonStore } from '../store/seasonStore'
@@ -21,7 +27,7 @@ const TABS: { id: Tab; label: string }[] = [
 ]
 
 function tabFromHash(): Tab {
-  const t = new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('tab')
+  const t = readHashQuery(window.location.hash).tab
   return (TABS.some((x) => x.id === t) ? t : 'matchups') as Tab
 }
 
@@ -29,6 +35,7 @@ function tabFromHash(): Tab {
 export function SeasonScreen() {
   const sessionId = useDraftStore((s) => s.sessionId)
   const state = useDraftStore((s) => s.state)
+  const isDemo = useDraftStore((s) => s.snapshot?.is_demo ?? false)
   const overview = useSeasonStore((s) => s.overview)
   const overviewStatus = useSeasonStore((s) => s.overviewStatus)
   const overviewError = useSeasonStore((s) => s.overviewError)
@@ -47,45 +54,49 @@ export function SeasonScreen() {
 
   if (!sessionId || !state) {
     return (
-      <div className="panel">
-        <p>No session loaded.</p>
-        <a href={buildUrl('setup', null)}>Go to setup</a>
-      </div>
+      <EmptyState title="No session loaded" action={<a href={buildUrl('setup', null)}>Go to setup</a>}>
+        The season view follows a drafted session that is linked to an ESPN league.
+      </EmptyState>
     )
   }
   if (!state.is_complete) {
     return (
-      <div className="panel">
-        <p>The season view opens once the draft is complete.</p>
-        <a href={buildUrl('draft', sessionId)}>Back to the draft</a>
-      </div>
+      <EmptyState title="The season view opens once the draft is complete" action={<a href={buildUrl('draft', sessionId)}>Back to the draft</a>}>
+        Record every pick first; rosters, matchups and free agents then follow ESPN.
+      </EmptyState>
     )
   }
   const linked = state.league.espn_league_id !== null && state.league.espn_league_id !== undefined
   const userId = state.league.user_manager_id
   const pick = (t: Tab) => {
     setTab(t)
-    window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#/season?tab=${t}`)
+    replaceHashQuery({ tab: t })
   }
+  const chips: ContextChip[] = []
+  if (overview?.league_name) chips.push({ label: 'League', value: overview.league_name, tone: 'accent' })
+  if (overview) chips.push({ label: 'Week', value: overview.current_period })
+  if (overview?.synced_at) chips.push({ label: 'Synced', value: fmtDate(overview.synced_at).slice(5, 16), title: fmtDate(overview.synced_at) })
+  if (isDemo) chips.push({ label: 'Data', value: 'demo', tone: 'demo', title: 'Synthetic players and projections' })
+
   return (
-    <div className="stack" data-testid="season">
+    <div className="stack season-screen" data-testid="season">
+      <PageHeader
+        title="Season"
+        description="This week's matchup odds, power rankings, free-agent swaps and ESPN results for your league. Odds come from simulated weeks on real NBA schedules; results come from ESPN."
+        chips={chips}
+      />
       {linked ? <SyncBar sessionId={sessionId} /> : <LinkDialog sessionId={sessionId} />}
-      {overviewStatus === 'error' && <p className="error">{overviewError}</p>}
+      {overviewStatus === 'error' && <ErrorState title="Could not load the season overview">{overviewError}</ErrorState>}
       <section className="panel">
-        <div className="tabs" role="tablist">
-          {TABS.map((t) => (
-            <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => pick(t.id)} data-testid={`season-tab-${t.id}`}>
-              {t.label}
-            </button>
-          ))}
-        </div>
-        {!overview && overviewStatus === 'loading' && <p className="muted">Computing…</p>}
-        {overview && tab === 'matchups' && (linked ? <MatchupsTab sessionId={sessionId} userId={userId} /> : <p className="muted">Link the league to see ESPN pairings.</p>)}
+        <Segmented<Tab> label="Season views" value={tab} onChange={pick} options={TABS.map((t) => ({ id: t.id, label: t.label, testId: `season-tab-${t.id}` }))} />
+        {!overview && overviewStatus === 'loading' && <LoadingState title="Simulating this week's matchups" />}
+        {overview && tab === 'matchups' && (linked ? <MatchupsTab sessionId={sessionId} userId={userId} /> : <EmptyState title="Link the league to see ESPN pairings" />)}
         {overview && tab === 'power' && <PowerTab />}
         {overview && tab === 'free-agents' && <FreeAgentsTab sessionId={sessionId} />}
-        {overview && tab === 'results' && (linked ? <ResultsTab sessionId={sessionId} /> : <p className="muted">Link the league to see ESPN results.</p>)}
-        {overview && tab === 'predictions' && (linked ? <PredictionsTab sessionId={sessionId} userId={userId} /> : <p className="muted">Link the league to start the track record.</p>)}
+        {overview && tab === 'results' && (linked ? <ResultsTab sessionId={sessionId} /> : <EmptyState title="Link the league to see ESPN results" />)}
+        {overview && tab === 'predictions' && (linked ? <PredictionsTab sessionId={sessionId} userId={userId} /> : <EmptyState title="Link the league to start the track record" />)}
       </section>
+      <HowItWorks />
       <PlayerDrawer />
     </div>
   )

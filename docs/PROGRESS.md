@@ -1,5 +1,28 @@
 # Progress
 
+## 2026-10-23 — UI redesign: basketball analytics workspace (DEC-30)
+Spec `docs/superpowers/specs/2026-10-23-ui-redesign-design.md`, plan
+`docs/superpowers/plans/2026-10-23-ui-redesign.md`. Frontend only.
+- App shell: charcoal sidebar with session/league/sync context (icon rail under 1180 px, bottom tab
+  bar on phones), page header with context chips and page-level filter bar, hash-persisted page
+  selections (`lib/hashQuery.ts`).
+- Design system: `styles/{tokens,base,shell,ui,charts,draft,season,performers}.css`, shared
+  `components/ui/*`, hand-written charts in `components/charts/*`, lucide icons replace emoji.
+- Draft: status strip, recommendation hero (value ± sd, fit, projected GP/MIN, availability,
+  category impact as diverging bars), category profile with z bars, lineup-slot roster, snake board
+  with team colours, compare dialog with aligned z bars.
+- Season: featured matchup with the winner's chance as the key number and ESPN running totals
+  under each category (labelled actual) beside the simulated odds; power rankings as a team ×
+  category heatmap with a per-team profile on click; free agents with a swap panel (add, drop, net
+  Δ, z by category); results with won/lost marks and a hatched projected row; track-record stat
+  cards.
+- Performers: stat row, leaderboards, diverging over/under chart, actual-vs-expected scatter with
+  equality line, sortable table, detail drawer, explainer behind a disclosure; week-by-week trend
+  shown as an unavailable state (no per-player history in the API).
+- Verified: frontend 64 unit tests (19 files; new: hashQuery, scale, Tooltip, ChartFrame, charts,
+  Sidebar, FreeAgentsTab), `tsc` clean, Playwright 4/4 on ports 8011/5177, screenshots at 1440 and
+  390 px for every screen (`docs/screenshots/`).
+
 ## 2026-10-23 — Team performers, performance tracker, live scores (DEC-28, DEC-29)
 - **Performers** tab: ESPN applied box scores per matchup period stored by every sync
   (`period_player_stats`; current and previous week), contribution and over-expectation leaderboards,

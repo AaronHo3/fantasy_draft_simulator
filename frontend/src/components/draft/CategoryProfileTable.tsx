@@ -1,5 +1,5 @@
 import type { CategoryProfile, CategoryDelta, CategoryDef } from '../../api/types'
-import { categoryLabel, fmtCategoryDelta, fmtCategoryValue, fmtInt, fmtNum, fmtSigned, isRate, LOWER_IS_BETTER } from '../../lib/format'
+import { categoryLabel, fmtCategoryDelta, fmtCategoryValue, fmtInt, fmtNum, fmtSigned, LOWER_IS_BETTER } from '../../lib/format'
 import { selectRecCurrent, useDraftStore } from '../../store/draftStore'
 import { Badge } from '../common/Badge'
 
@@ -10,15 +10,32 @@ interface ProfileTableProps {
   title?: string
 }
 
+const Z_EXTENT = 12
+
+/** z-score as a bar around zero: strengths extend right (green), weaknesses left (red). */
+export function ZBar({ z, extent = Z_EXTENT }: { z: number; extent?: number }) {
+  const w = Math.min(50, (Math.abs(z) / extent) * 50)
+  return (
+    <span className="zbar-track" aria-hidden="true">
+      <span className={`zbar-fill ${z < 0 ? 'neg' : 'pos'}`} style={{ width: `${w}%` }} />
+    </span>
+  )
+}
+
+/** Roster category totals with z as aligned bars; shows before/after when previewing a pick. */
 export function ProfileTable({ profile, categories, deltas, title }: ProfileTableProps) {
   const keys = Object.keys(profile.totals)
   const attemptsFor = (k: string) => (k === 'FG_PCT' ? profile.attempts.FGA : k === 'FT_PCT' ? profile.attempts.FTA : null)
   return (
     <div className="table-wrap">
-      <table className="grid" data-testid="category-profile" aria-label={title ?? 'Category profile'}>
+      <table className="grid profile" data-testid="category-profile" aria-label={title ?? 'Category profile'}>
         <thead>
           <tr>
             <th scope="col">Category</th>
+            <th scope="col" className="zbar" title="Roster z-score against a full draft-pool roster; above +1 is a strength, below −1 a weakness">
+              Strength (z)
+            </th>
+            <th scope="col" className="num">z</th>
             {deltas ? (
               <>
                 <th scope="col" className="num">Before</th>
@@ -29,7 +46,6 @@ export function ProfileTable({ profile, categories, deltas, title }: ProfileTabl
               <th scope="col" className="num">Projected</th>
             )}
             <th scope="col" className="num">Attempts</th>
-            <th scope="col" className="num">z</th>
             <th scope="col">Punt</th>
             <th scope="col" className="num">Weight</th>
           </tr>
@@ -41,12 +57,17 @@ export function ProfileTable({ profile, categories, deltas, title }: ProfileTabl
             const att = attemptsFor(k)
             const delta = d?.delta ?? null
             const good = delta === null ? null : LOWER_IS_BETTER.has(k) ? delta < 0 : delta > 0
+            const z = profile.z[k] ?? 0
             return (
               <tr key={k} data-cat={k}>
                 <th scope="row">
                   {categoryLabel(k, categories)}
                   {LOWER_IS_BETTER.has(k) && <span className="muted"> (lower better)</span>}
                 </th>
+                <td className="zbar">
+                  <ZBar z={z} />
+                </td>
+                <td className={`num ${z > 1 ? 'pos' : z < -1 ? 'neg' : ''}`}>{fmtSigned(z, 1)}</td>
                 {d ? (
                   <>
                     <td className="num">{fmtCategoryValue(k, d.before)}</td>
@@ -65,7 +86,6 @@ export function ProfileTable({ profile, categories, deltas, title }: ProfileTabl
                   <td className="num">{fmtCategoryValue(k, profile.totals[k])}</td>
                 )}
                 <td className="num muted">{att === null ? '' : `${fmtInt(att)} ${k === 'FG_PCT' ? 'FGA' : 'FTA'}`}</td>
-                <td className={`num ${profile.z[k] > 1 ? 'pos' : profile.z[k] < -1 ? 'neg' : ''}`}>{fmtSigned(profile.z[k], 1)}</td>
                 <td>{punt ? <Badge tone="warn">{punt} punt</Badge> : <span className="muted">—</span>}</td>
                 <td className="num">{fmtNum(profile.weights[k], 2)}</td>
               </tr>
@@ -73,9 +93,7 @@ export function ProfileTable({ profile, categories, deltas, title }: ProfileTabl
           })}
         </tbody>
       </table>
-      <p className="muted" style={{ fontSize: 11, marginTop: 4 }}>
-        Units: {profile.unit}; rates are makes ÷ attempts (shown with attempts){isRate('FG_PCT') ? '' : ''}.
-      </p>
+      <p className="table-note">Units: {profile.unit}; rates are makes ÷ attempts (shown with attempts). Bars span ±{Z_EXTENT} z.</p>
     </div>
   )
 }
@@ -96,9 +114,7 @@ export function CategoryProfileTable() {
         {!current && <span className="badge">recalculating…</span>}
       </div>
       {profile ? <ProfileTable profile={profile} categories={state.league.categories ?? []} deltas={deltas} /> : <p className="muted">Recalculating…</p>}
-      <p className="muted small-text" style={{ marginTop: 4 }}>
-        Roster totals, not player averages. z above +1 is a strength, below −1 a weakness, relative to a full draft-pool roster.
-      </p>
+      <p className="table-note">Roster totals, not player averages. z above +1 is a strength, below −1 a weakness, relative to a full draft-pool roster.</p>
     </section>
   )
 }

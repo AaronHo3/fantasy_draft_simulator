@@ -1,4 +1,5 @@
 import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react'
+import { Icon } from '../ui/Icon'
 
 interface ModalProps {
   title: string
@@ -39,7 +40,7 @@ export function Modal({ title, onClose, children, wide, onKeyDown, testId }: Mod
         <div className="modal-head">
           <h2>{title}</h2>
           <button type="button" onClick={onClose} aria-label={`Close ${title}`}>
-            Close
+            <Icon name="close" size={14} /> Close
           </button>
         </div>
         {children}

@@ -3,11 +3,12 @@ import { lastCommittedPick, managerName } from '../../lib/draftState'
 import { fmtDate, fmtMs } from '../../lib/format'
 import { selectTier, useDraftStore, type SaveStatus } from '../../store/draftStore'
 import { Badge, type BadgeTone } from '../common/Badge'
+import { Icon } from '../ui/Icon'
 
 const SAVE_TONE: Record<SaveStatus, BadgeTone> = { saved: 'ok', saving: 'accent', offline: 'error', error: 'error' }
 const SAVE_TEXT: Record<SaveStatus, string> = { saved: 'saved', saving: 'saving…', offline: 'offline · unsaved pick', error: 'save error' }
 
-/** Dark scoreboard strip: live status only. Setup/import live in the header, simulation settings in Strategy. */
+/** Charcoal status strip: live state only. Setup lives in Setup, simulation settings in Strategy. */
 export function Scoreboard() {
   const state = useDraftStore((s) => s.state)
   const saveStatus = useDraftStore((s) => s.saveStatus)
@@ -40,10 +41,12 @@ export function Scoreboard() {
   }
 
   return (
-    <div className="scoreboard" role="region" aria-label="Draft status">
+    <div className="status-strip" role="region" aria-label="Draft status">
       <div className="cell">
-        <span className="live" data-testid="top-mode">{state.is_complete ? 'DRAFT COMPLETE' : 'LIVE DRAFT'}</span>
-        <span className="muted" style={{ fontSize: 10 }}>
+        <span className={state.is_complete ? 'live done' : 'live'} data-testid="top-mode">
+          {state.is_complete ? 'DRAFT COMPLETE' : 'LIVE DRAFT'}
+        </span>
+        <span className="muted" style={{ fontSize: 11 }}>
           {state.league.scoring_format.replace('h2h_', 'H2H ').replace('_', ' ')}{' '}
           <Badge tone={state.format_confirmed ? 'ok' : 'warn'} testId="top-format">
             {state.format_confirmed ? 'confirmed' : 'NOT confirmed'}
@@ -66,6 +69,15 @@ export function Scoreboard() {
         </span>
       </div>
       <div className="cell">
+        <span className="k">My next pick</span>
+        <span className="v">
+          <span data-testid="top-my-next">{state.user_next_pick ? `#${state.user_next_pick.overall} (R${state.user_next_pick.round})` : '—'}</span>
+          <span className="muted"> · </span>
+          <span data-testid="top-picks-until">{state.picks_until_user_turn ?? '—'}</span>
+          <span className="muted"> picks away</span>
+        </span>
+      </div>
+      <div className="cell">
         <span className="k">My team</span>
         <select data-testid="top-my-team" aria-label="Which team is mine" value={uid} onChange={(e) => chooseTeam(e.target.value)}>
           {state.league.managers.map((m, i) => (
@@ -75,19 +87,10 @@ export function Scoreboard() {
           ))}
         </select>
       </div>
-      <div className="cell">
-        <span className="k">My next pick</span>
-        <span className="v">
-          <span data-testid="top-my-next">{state.user_next_pick ? `#${state.user_next_pick.overall} (R${state.user_next_pick.round})` : '—'}</span>
-          <span className="muted"> · </span>
-          <span data-testid="top-picks-until">{state.picks_until_user_turn ?? '—'}</span>
-          <span className="muted"> picks away</span>
-        </span>
-      </div>
       <div className="cell grow">
         {last && (
           <button type="button" className="small" data-testid="board-undo" disabled={pending !== null} onClick={() => void undo()} title="Undo the most recent pick">
-            Undo #{last.overall} {players[last.player_id]?.name ?? ''}
+            <Icon name="undo" size={13} /> Undo #{last.overall} {players[last.player_id]?.name ?? ''}
           </button>
         )}
         <span className="muted" title={`${snapshot?.label ?? ''} · ${snapshot ? fmtDate(snapshot.created_at) : ''}`} style={{ fontSize: 11 }}>

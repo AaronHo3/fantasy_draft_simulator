@@ -198,7 +198,7 @@ export function AllPlayersTable() {
                             onClick={() => void commitPick(p.player_id, onClock)}
                             title={meOnClock ? `Draft ${p.name} to my team` : `Record ${p.name} for ${managerName(state, onClock)}`}
                           >
-                            {meOnClock ? 'Draft' : `→ ${managerName(state, onClock)}`}
+                            {meOnClock ? 'Draft' : `Record for ${managerName(state, onClock)}`}
                           </button>
                         )}
                       </>

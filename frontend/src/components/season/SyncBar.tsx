@@ -2,6 +2,7 @@ import { fmtDate } from '../../lib/format'
 import { useDraftStore } from '../../store/draftStore'
 import { AUTO_REFRESH_OPTIONS, type AutoRefreshMinutes, useSeasonStore } from '../../store/seasonStore'
 import { Badge } from '../common/Badge'
+import { Icon } from '../ui/Icon'
 
 /** "Linked to X · synced N min ago · Sync now · auto-refresh" plus the last sync's summary and warnings. */
 export function SyncBar({ sessionId }: { sessionId: string }) {
@@ -17,13 +18,16 @@ export function SyncBar({ sessionId }: { sessionId: string }) {
   const players = useDraftStore((s) => s.players)
   const name = (id: string) => players[id]?.name ?? id
   return (
-    <section className="panel sync-bar" aria-label="ESPN sync">
-      <div className="row between">
-        <span>
-          Linked to <b>{overview?.league_name ?? 'ESPN league'}</b>
-          <span className="muted"> · synced {overview?.synced_at ? fmtDate(overview.synced_at) : 'never'}</span>
+    <section className="sync-bar" aria-label="ESPN sync">
+      <div className="sync-main">
+        <span className="sync-link">
+          <Icon name="link" size={15} />
+          <span>
+            Linked to <b>{overview?.league_name ?? 'ESPN league'}</b>
+            <span className="muted"> · synced {overview?.synced_at ? fmtDate(overview.synced_at) : 'never'}</span>
+          </span>
         </span>
-        <span className="row" style={{ gap: 8 }}>
+        <span className="sync-controls">
           <label className="muted" htmlFor="auto-refresh">
             Auto-refresh
           </label>
@@ -35,13 +39,14 @@ export function SyncBar({ sessionId }: { sessionId: string }) {
             ))}
           </select>
           <button type="button" className="primary" onClick={() => void sync(sessionId, lastSeq)} disabled={syncStatus === 'syncing'} data-testid="sync-now">
+            <Icon name="refresh" size={14} className={syncStatus === 'syncing' ? 'spin' : undefined} />
             {syncStatus === 'syncing' ? 'Syncing…' : 'Sync now'}
           </button>
         </span>
       </div>
       {syncError && <p className="error">{syncError}</p>}
       {(lastSync ?? overview) && (
-        <p className="muted" style={{ marginTop: 4 }}>
+        <p className="sync-summary muted">
           {lastSync?.summary ?? overview?.summary}
           {lastSync?.changes.map((c) => (
             <span key={c.manager_id} className="change">
@@ -51,11 +56,15 @@ export function SyncBar({ sessionId }: { sessionId: string }) {
           ))}
         </p>
       )}
-      {(lastSync?.warnings ?? overview?.warnings ?? []).map((w) => (
-        <div key={w} style={{ marginTop: 4 }}>
-          <Badge tone="warn">{w}</Badge>
+      {(lastSync?.warnings ?? overview?.warnings ?? []).length > 0 && (
+        <div className="row" style={{ marginTop: 4 }}>
+          {(lastSync?.warnings ?? overview?.warnings ?? []).map((w) => (
+            <Badge key={w} tone="warn">
+              {w}
+            </Badge>
+          ))}
         </div>
-      ))}
+      )}
     </section>
   )
 }

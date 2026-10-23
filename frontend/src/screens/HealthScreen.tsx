@@ -2,8 +2,12 @@ import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import type { HealthView } from '../api/types'
 import { Badge } from '../components/common/Badge'
+import { PageHeader } from '../components/ui/PageHeader'
+import { StatCard, StatRow } from '../components/ui/StatCard'
+import { ErrorState, LoadingState } from '../components/ui/States'
 import { fmtDate } from '../lib/format'
 
+/** Backend status, every projection snapshot with provenance, and the data-health report. */
 export function HealthScreen() {
   const [health, setHealth] = useState<HealthView | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -15,50 +19,38 @@ export function HealthScreen() {
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
   }, [])
 
-  if (error) {
-    return (
-      <div className="callout error" role="alert">
-        Backend unreachable: {error}
-      </div>
-    )
-  }
-  if (!health) return <p className="muted">Loading /api/health…</p>
+  if (error) return <ErrorState title="Backend unreachable">{error}</ErrorState>
+  if (!health) return <LoadingState title="Loading /api/health" />
   const demoOnly = health.snapshots.length > 0 && health.snapshots.every((s) => s.is_demo)
   return (
     <div className="stack">
+      <PageHeader title="Data health" description="Where the numbers come from: snapshots, their sources and freshness, and the backend's own health report." />
       {demoOnly && (
         <div className="callout error" role="status">
-          <b>Running on DEMO DATA.</b> Every snapshot is synthetic (source=demo). Players, projections and ADP are not real; use <code>make refresh</code> to build a real snapshot
-          under <code>data/nba/</code>.
+          <b>Running on demo data.</b> Every snapshot is synthetic (source=demo). Players, projections and ADP are not real; use <code>make refresh</code> to build a real snapshot under <code>data/nba/</code>.
+        </div>
+      )}
+      <StatRow>
+        <StatCard label="Backend" value={health.status} tone={health.status === 'ok' ? 'good' : 'bad'} detail={<code>{health.data_dir}</code>} />
+        <StatCard label="Sessions" value={health.sessions} detail="stored locally" />
+        <StatCard label="Snapshots" value={health.snapshots.length} detail={<code>{health.default_snapshot_id}</code>} />
+      </StatRow>
+      {Object.keys(health.snapshot_errors).length > 0 && (
+        <div className="callout error">
+          Snapshot errors:
+          <ul>
+            {Object.entries(health.snapshot_errors).map(([k, v]) => (
+              <li key={k}>
+                <code>{k}</code>: {v}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
       <section className="panel">
-        <h2>Backend</h2>
-        <div className="row">
-          <Badge tone={health.status === 'ok' ? 'ok' : 'error'}>status {health.status}</Badge>
-          <span>
-            data dir <code>{health.data_dir}</code>
-          </span>
-          <span>{health.sessions} sessions</span>
-          <span>
-            default snapshot <code>{health.default_snapshot_id}</code>
-          </span>
+        <div className="section-title">
+          <h2>Snapshots</h2>
         </div>
-        {Object.keys(health.snapshot_errors).length > 0 && (
-          <div className="callout error" style={{ marginTop: 6 }}>
-            Snapshot errors:
-            <ul>
-              {Object.entries(health.snapshot_errors).map(([k, v]) => (
-                <li key={k}>
-                  <code>{k}</code>: {v}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </section>
-      <section className="panel">
-        <h2>Snapshots</h2>
         <div className="table-wrap">
           <table className="grid">
             <thead>
@@ -104,7 +96,9 @@ export function HealthScreen() {
         </div>
       </section>
       <section className="panel">
-        <h2>data_health</h2>
+        <div className="section-title">
+          <h2>Data health report</h2>
+        </div>
         <DataHealth value={health.data_health} />
       </section>
     </div>
@@ -118,22 +112,24 @@ function DataHealth({ value }: { value: Record<string, unknown> }) {
   return (
     <div className="stack">
       {status && <Badge tone={status === 'ok' ? 'ok' : 'warn'}>status {status}</Badge>}
-      <table className="grid" aria-label="Data health">
-        <thead>
-          <tr>
-            <th scope="col">Key</th>
-            <th scope="col">Value</th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map(([k, v]) => (
-            <tr key={k}>
-              <th scope="row">{k}</th>
-              <td>{typeof v === 'object' && v !== null ? <pre style={{ margin: 0 }}>{JSON.stringify(v, null, 1)}</pre> : String(v)}</td>
+      <div className="table-wrap">
+        <table className="grid" aria-label="Data health">
+          <thead>
+            <tr>
+              <th scope="col">Key</th>
+              <th scope="col">Value</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {entries.map(([k, v]) => (
+              <tr key={k}>
+                <th scope="row">{k}</th>
+                <td>{typeof v === 'object' && v !== null ? <pre style={{ margin: 0 }}>{JSON.stringify(v, null, 1)}</pre> : String(v)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }

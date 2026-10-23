@@ -1,0 +1,423 @@
+/* Shared UI: stat cards, chart frames, tooltips, legends, player identity, states, disclosure,
+   how-it-works diagram, chips and portraits. */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--s-3);
+}
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s-3) var(--s-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  min-width: 0;
+}
+.stat-label {
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+}
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.005em;
+}
+.stat-detail {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.stat-card.good .stat-value {
+  color: var(--good);
+}
+.stat-card.bad .stat-value {
+  color: var(--bad);
+}
+.stat-card.accent .stat-value {
+  color: var(--teal-hover);
+}
+.stat-card.amber {
+  background: var(--mine);
+  border-color: var(--mine-border);
+}
+
+/* chart frame */
+.chart-frame {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: var(--s-3) var(--s-4) var(--s-4);
+  min-width: 0;
+}
+.chart-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--s-2);
+}
+.chart-title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.chart-title h3 {
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+.chart-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+.chart-desc {
+  color: var(--ink-3);
+  font-size: var(--fs-sm);
+  margin: -4px 0 var(--s-2);
+  max-width: 80ch;
+}
+.chart-body {
+  min-width: 0;
+}
+.chart-unavailable {
+  display: flex;
+  gap: var(--s-2);
+  align-items: flex-start;
+  padding: var(--s-3);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-sm);
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+  background: var(--surface-2);
+}
+.legend {
+  list-style: none;
+  margin: 0 0 0 auto;
+  padding: 0;
+  display: flex;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
+}
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.swatch {
+  display: inline-block;
+  width: 12px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid transparent;
+  background: var(--ink-2);
+}
+.swatch.actual {
+  background: var(--teal);
+  border-color: var(--teal);
+}
+.swatch.projected {
+  background: repeating-linear-gradient(45deg, var(--projected) 0 2px, transparent 2px 4px);
+  border-color: var(--projected);
+}
+.swatch.good {
+  background: var(--good);
+}
+.swatch.bad {
+  background: var(--bad);
+}
+.swatch.even {
+  background: var(--even);
+}
+.swatch.mine {
+  background: var(--mine);
+  border-color: var(--mine-border);
+}
+.swatch.team {
+  background: linear-gradient(90deg, #c8102e, #006bb6, #007a33);
+}
+
+/* tooltip */
+.tip-anchor {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+}
+.tip-anchor > :first-child {
+  min-width: 0;
+}
+.tip {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 45;
+  padding: 6px 9px;
+  background: var(--nav-bg);
+  color: #fff;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-xs);
+  line-height: 1.35;
+  white-space: normal;
+  width: max-content;
+  max-width: min(300px, calc(100vw - 32px));
+  box-shadow: var(--shadow-float);
+  pointer-events: none;
+}
+.tip-top {
+  bottom: calc(100% + 6px);
+}
+.tip-bottom {
+  top: calc(100% + 6px);
+}
+
+/* player identity */
+.player-id {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+.player-id-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+.player-id-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.player-id-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.team-mark {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex: 0 0 auto;
+}
+.team-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-variant-numeric: tabular-nums;
+}
+.portrait {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  object-fit: cover;
+  object-position: top;
+  background: var(--surface-3);
+  flex: 0 0 auto;
+}
+.portrait.fallback {
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.4em;
+  letter-spacing: 0.02em;
+  font-family: var(--font-display);
+}
+
+/* states */
+.state {
+  display: flex;
+  gap: var(--s-3);
+  align-items: flex-start;
+  padding: var(--s-4);
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-2);
+}
+.state b {
+  color: var(--ink);
+}
+.state p {
+  margin: 4px 0 0;
+  font-size: var(--fs-sm);
+}
+.state-action {
+  margin-top: var(--s-2);
+  display: flex;
+  gap: var(--s-2);
+}
+.state.empty {
+  border-style: dashed;
+  background: transparent;
+}
+.state.error {
+  border-color: color-mix(in srgb, var(--bad) 50%, white);
+  background: var(--bad-soft);
+}
+.state.error svg {
+  color: var(--bad);
+}
+.state.loading svg,
+.state.empty svg {
+  color: var(--ink-3);
+}
+.spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--teal);
+  animation: spin 0.9s linear infinite;
+  flex: 0 0 auto;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* disclosure */
+.disclosure {
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+}
+.disclosure-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 4px var(--s-2);
+}
+.disclosure-btn {
+  border: none;
+  background: none;
+  padding: 6px 6px;
+  font-weight: 600;
+  color: var(--ink-2);
+  justify-content: flex-start;
+}
+.disclosure-btn:hover {
+  background: none;
+  color: var(--ink);
+}
+.disclosure-aside {
+  margin-left: auto;
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+}
+.disclosure-body {
+  padding: 0 var(--s-4) var(--s-4);
+  border-top: 1px solid var(--border);
+  padding-top: var(--s-3);
+}
+
+/* how it works */
+.how-it-works {
+  margin: 0;
+}
+.how-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.how-box {
+  fill: var(--surface-2);
+  stroke: var(--border-strong);
+}
+.how-box.last {
+  fill: var(--teal-soft);
+  stroke: var(--teal);
+}
+.how-step {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  fill: var(--ink);
+}
+.how-detail {
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.25;
+  color: var(--ink-2);
+  font-family: var(--font-body);
+}
+.how-line {
+  stroke: var(--ink-3);
+  stroke-width: 1.5;
+}
+.how-arrow {
+  fill: var(--ink-3);
+}
+.how-list {
+  display: none;
+  margin: var(--s-2) 0 0;
+  padding-left: 18px;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.how-list b {
+  color: var(--ink);
+}
+@media (max-width: 760px) {
+  .how-svg {
+    display: none;
+  }
+  .how-list {
+    display: block;
+  }
+}
+
+/* chips */
+.chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.chip,
+.chips button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-pill);
+  padding: 0 9px;
+  background: var(--surface);
+  font-size: var(--fs-xs);
+  line-height: 20px;
+  min-height: 0;
+  font-weight: 500;
+}
+.chips button[aria-pressed='true'] {
+  background: var(--teal);
+  color: var(--teal-ink);
+  border-color: var(--teal);
+}
+.chip button {
+  border: none;
+  background: none;
+  padding: 0 2px;
+  min-height: 0;
+}
+.pos-chip {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 3px;
+  margin-left: 2px;
+  color: var(--ink-2);
+  background: var(--surface);
+}

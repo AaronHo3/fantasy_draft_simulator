@@ -2,7 +2,10 @@ import { fmtCategoryDelta, fmtNum, fmtSigned, PER_GAME_KEYS, positionsText } fro
 import { idsMatch } from '../../lib/revision'
 import { useDraftStore } from '../../store/draftStore'
 import { Modal } from '../common/Modal'
+import { TeamMark } from '../ui/PlayerIdentity'
+import { ZBar } from './CategoryProfileTable'
 
+/** Side-by-side comparison: score, per-game line, and each category's z as an aligned bar on one scale. */
 export function CompareView() {
   const open = useDraftStore((s) => s.compareOpen)
   const result = useDraftStore((s) => s.compareResult)
@@ -14,6 +17,7 @@ export function CompareView() {
   if (!open) return null
   const stale = result && state ? !idsMatch(result.ids, state) : false
   const players = result?.players ?? []
+  const zExtent = Math.max(2, ...players.flatMap((p) => Object.values(p.z).map((v) => Math.abs(v))))
   return (
     <Modal title="Compare players" onClose={close} wide>
       {status === 'loading' && <p className="muted">Comparing…</p>}
@@ -37,11 +41,11 @@ export function CompareView() {
               <tr>
                 <th scope="col">Metric</th>
                 {players.map((p) => (
-                  <th key={p.player_id} scope="col">
+                  <th key={p.player_id} scope="col" className="who">
                     {p.name}
                     <br />
                     <span className="muted">
-                      {p.team ?? '—'} · {positionsText(p.eligible_positions)}
+                      <TeamMark team={p.team} /> · {positionsText(p.eligible_positions)}
                     </span>
                   </th>
                 ))}
@@ -52,7 +56,7 @@ export function CompareView() {
                 <th scope="row">Score (tier)</th>
                 {players.map((p) => (
                   <td key={p.player_id}>
-                    {fmtNum(p.score, 2)} (T{p.tier})
+                    <b>{fmtNum(p.score, 2)}</b> (T{p.tier})
                   </td>
                 ))}
               </tr>
@@ -65,7 +69,7 @@ export function CompareView() {
                 ))}
               </tr>
               <tr>
-                <th scope="row">Slot · survival</th>
+                <th scope="row">Slot · availability</th>
                 {players.map((p) => (
                   <td key={p.player_id}>
                     {p.slot ?? '—'} · {p.survival_hint}
@@ -79,8 +83,8 @@ export function CompareView() {
                 ))}
               </tr>
               <tr>
-                <th colSpan={players.length + 1} scope="colgroup" style={{ textAlign: 'left' }}>
-                  Per game
+                <th colSpan={players.length + 1} scope="colgroup" className="group">
+                  Per game (projected)
                 </th>
               </tr>
               {PER_GAME_KEYS.map((k) => (
@@ -92,8 +96,8 @@ export function CompareView() {
                 </tr>
               ))}
               <tr>
-                <th colSpan={players.length + 1} scope="colgroup" style={{ textAlign: 'left' }}>
-                  z (league-standardised season value) · Δ vs my roster
+                <th colSpan={players.length + 1} scope="colgroup" className="group">
+                  z (league-standardised season value, bars on ±{zExtent.toFixed(0)}) · Δ to my roster totals if drafted
                 </th>
               </tr>
               {result.keys.map((k) => (
@@ -103,8 +107,11 @@ export function CompareView() {
                     const d = p.category_deltas?.[k]
                     return (
                       <td key={p.player_id}>
-                        {fmtSigned(p.z[k], 2)}
-                        {d ? <span className="muted"> · Δ {fmtCategoryDelta(k, d.delta)}</span> : null}
+                        <span className="mini">
+                          <ZBar z={p.z[k] ?? 0} extent={zExtent} />
+                          <span className={(p.z[k] ?? 0) > 0.5 ? 'pos' : (p.z[k] ?? 0) < -0.5 ? 'neg' : ''}>{fmtSigned(p.z[k], 2)}</span>
+                          {d ? <span className="muted">Δ {fmtCategoryDelta(k, d.delta)}</span> : null}
+                        </span>
                       </td>
                     )
                   })}

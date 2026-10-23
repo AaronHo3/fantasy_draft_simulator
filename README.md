@@ -23,6 +23,16 @@ beat ADP-style drafting by about half a category per weekly matchup.
   projection by the most, per week or season to date, built from ESPN's applied box scores.
 - A week-by-week actual-vs-projection tracker you can plot (`make performance`).
 
+## Screens
+
+![Draft control room](docs/screenshots/draft.png)
+![Season matchups](docs/screenshots/season.png)
+![Team performers](docs/screenshots/performers.png)
+
+One workspace: charcoal sidebar, warm canvas, teal for actions, amber for what is yours, green/red
+only for favoured/unfavoured and over/under expectation, NBA team colours for players. Every chart
+prints its values; projections are grey or hatched, ESPN actuals are solid; demo data is labelled.
+
 ## Running it
 
 ```
@@ -47,6 +57,6 @@ nothing else is needed. Real data under `data/nba/` and local exports are git-ig
 ## Docs
 
 `CLAUDE.md` (invariants, resume protocol) · `docs/USER_GUIDE.md` (draft day and in-season workflow)
-· `docs/DATA_SOURCES.md` · `docs/MODEL_CARD.md` · `docs/DECISIONS.md` (DEC-01..29) ·
+· `docs/DATA_SOURCES.md` · `docs/MODEL_CARD.md` · `docs/DECISIONS.md` (DEC-01..30) ·
 `docs/DRAFT_COPILOT_PLAN.md` · `docs/PROGRESS.md` · `docs/EVALUATION.md`, `docs/VALIDATION.md`,
 `docs/BENCHMARKS.md` (measured results).

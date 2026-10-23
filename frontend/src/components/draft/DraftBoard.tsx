@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
 import type { PickView } from '../../api/types'
+import { teamColor } from '../../lib/teamColors'
 import { useDraftStore } from '../../store/draftStore'
 import { CorrectPickDialog } from './CorrectPickDialog'
 
+/** Snake board: one column per manager, team-coloured picks, my column in amber, the live cell outlined. */
 export function DraftBoard() {
   const state = useDraftStore((s) => s.state)
   const players = useDraftStore((s) => s.players)
@@ -29,16 +31,18 @@ export function DraftBoard() {
 
   return (
     <div>
-      <p className="muted small-text" style={{ marginBottom: 6 }}>
-        Click a filled cell to correct that pick. Your column is highlighted; the outlined cell is on the clock.
+      <p className="muted small-text" style={{ marginBottom: 8 }}>
+        Click a filled cell to correct that pick. Your column is amber; the outlined cell is on the clock. Colour bars are NBA teams.
       </p>
       <div className="board">
         <table aria-label="Draft board">
           <thead>
             <tr>
-              <th scope="col" className="round">Rd</th>
+              <th scope="col" className="round">
+                Rd
+              </th>
               {grid.order.map((mid) => (
-                <th key={mid} scope="col" className={mid === uid ? 'mine' : undefined}>
+                <th key={mid} scope="col" className={mid === uid ? 'mine' : undefined} title={nameOf(mid)}>
                   {nameOf(mid)}
                   {mid === uid ? ' (you)' : ''}
                 </th>
@@ -63,20 +67,28 @@ export function DraftBoard() {
                   const rec = grid.picks.get(sp.overall)
                   const cls = [mid === uid ? 'mine' : '', sp.overall === currentOverall ? 'current' : '', rec ? '' : 'empty'].filter(Boolean).join(' ')
                   const traded = sp.original_manager_id !== sp.manager_id
+                  const p = rec ? players[rec.player_id] : null
+                  const color = p ? teamColor(p.team).primary : 'transparent'
                   return (
-                    <td key={mid} className={cls || undefined} data-testid={`board-cell-${sp.overall}`} data-filled={rec ? 'true' : 'false'}>
-                      <span className="pick-no">
-                        #{sp.overall}
-                        {traded ? ` via ${nameOf(sp.original_manager_id)}` : ''}
-                        {rec?.is_keeper ? ' keeper' : ''}
+                    <td key={mid} className={cls || undefined} data-testid={`board-cell-${sp.overall}`} data-filled={rec ? 'true' : 'false'} style={rec ? { boxShadow: `inset 3px 0 0 ${color}` } : undefined}>
+                      <span className="cell-top">
+                        <span>
+                          #{sp.overall}
+                          {traded ? ` via ${nameOf(sp.original_manager_id)}` : ''}
+                          {rec?.is_keeper ? ' keeper' : ''}
+                        </span>
+                        {p && (
+                          <span className="cell-team">
+                            {p.team ?? 'FA'} · {p.primary_position ?? ''}
+                          </span>
+                        )}
                       </span>
-                      <br />
                       {rec ? (
                         rec.is_keeper ? (
-                          <span>{players[rec.player_id]?.name ?? rec.player_id}</span>
+                          <span className="keeper">{p?.name ?? rec.player_id}</span>
                         ) : (
-                          <button type="button" onClick={() => setCorrecting(sp.overall)} aria-label={`Correct pick ${sp.overall}`} disabled={pendingCommit !== null}>
-                            {players[rec.player_id]?.name ?? rec.player_id}
+                          <button type="button" onClick={() => setCorrecting(sp.overall)} aria-label={`Correct pick ${sp.overall}`} disabled={pendingCommit !== null} title={p?.name}>
+                            {p?.name ?? rec.player_id}
                           </button>
                         )
                       ) : sp.overall === currentOverall ? (

@@ -9,6 +9,7 @@ import { ImportPanel } from '../components/setup/ImportPanel'
 import { SessionList } from '../components/setup/SessionList'
 import { SlotsEditor } from '../components/setup/SlotsEditor'
 import { SnapshotPicker } from '../components/setup/SnapshotPicker'
+import { PageHeader } from '../components/ui/PageHeader'
 import { newIdempotencyKey } from '../lib/format'
 import { defaultLeague, validateLeague } from '../lib/leagueDefaults'
 import { buildUrl, navigate } from '../lib/router'
@@ -98,7 +99,9 @@ export function SetupScreen() {
   const selectedSnapshot = snapshots.find((s) => s.snapshot_id === snapshotId) ?? null
 
   return (
-    <div className="setup-layout">
+    <>
+      <PageHeader title="Setup" description="Resume a saved draft, import a session, or describe a new league: scoring, managers, lineup slots, keepers and traded picks." />
+      <div className="setup-layout">
       <div className="stack">
         <section className="panel" aria-labelledby="sessions-h">
           <div className="panel-head">
@@ -185,6 +188,7 @@ export function SetupScreen() {
           {!confirmFormat && <span className="muted">Format not confirmed: the draft screen will keep warning.</span>}
         </div>
       </section>
-    </div>
+      </div>
+    </>
   )
 }

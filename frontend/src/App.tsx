@@ -1,23 +1,16 @@
 import { useEffect, type ReactNode } from 'react'
 import { Notices } from './components/common/Notices'
-import { buildUrl, navigate, useLocation, type Route } from './lib/router'
+import { Sidebar } from './components/shell/Sidebar'
+import { navigate, useLocation } from './lib/router'
 import { browserStorage, SESSION_KEY } from './lib/storage'
 import { DraftScreen } from './screens/DraftScreen'
 import { HealthScreen } from './screens/HealthScreen'
-import { RecapScreen } from './screens/RecapScreen'
 import { PerformersScreen } from './screens/PerformersScreen'
+import { RecapScreen } from './screens/RecapScreen'
 import { SeasonScreen } from './screens/SeasonScreen'
 import { SetupScreen } from './screens/SetupScreen'
 import { useDraftStore } from './store/draftStore'
-
-const NAV: { route: Route; label: string; afterDraft?: boolean }[] = [
-  { route: 'setup', label: 'Setup' },
-  { route: 'draft', label: 'Draft' },
-  { route: 'recap', label: 'Recap' },
-  { route: 'season', label: 'Season', afterDraft: true },
-  { route: 'performers', label: 'Performers', afterDraft: true },
-  { route: 'health', label: 'Data health' },
-]
+import { useSeasonStore } from './store/seasonStore'
 
 export default function App() {
   const loc = useLocation()
@@ -25,6 +18,10 @@ export default function App() {
   const sessionName = useDraftStore((s) => s.sessionName)
   const loadSession = useDraftStore((s) => s.loadSession)
   const isComplete = useDraftStore((s) => s.state?.is_complete ?? false)
+  const linked = useDraftStore((s) => s.state?.league.espn_league_id != null)
+  const isDemo = useDraftStore((s) => s.snapshot?.is_demo ?? false)
+  const leagueName = useSeasonStore((s) => s.overview?.league_name ?? null)
+  const syncedAt = useSeasonStore((s) => s.overview?.synced_at ?? null)
 
   // Restore the session from ?session= or, failing that, from localStorage.
   useEffect(() => {
@@ -57,28 +54,20 @@ export default function App() {
   }
 
   return (
-    <>
-      <header className="app-header">
-        <span className="brand">9-cat Draft Copilot</span>
-        <nav aria-label="Main">
-          {NAV.filter((n) => !n.afterDraft || isComplete).map((n) => (
-            <a key={n.route} href={buildUrl(n.route, sessionId)} aria-current={loc.route === n.route ? 'page' : undefined}>
-              {n.label}
-            </a>
-          ))}
-        </nav>
-        <span className="spacer" />
-        {sessionId ? (
-          <span className="muted">
-            Session <span className="mono">{sessionId}</span>
-            {sessionName ? ` · ${sessionName}` : ''}
-          </span>
-        ) : (
-          <span className="muted">No session</span>
-        )}
-      </header>
-      <main className="app-main">{screen}</main>
+    <div className="app-shell">
+      <Sidebar
+        route={loc.route}
+        sessionId={sessionId}
+        sessionName={sessionName}
+        isComplete={isComplete}
+        leagueName={linked ? leagueName ?? 'Linked to ESPN' : null}
+        syncedAt={syncedAt}
+        isDemo={isDemo}
+      />
+      <main className="app-main" id="main">
+        {screen}
+      </main>
       <Notices />
-    </>
+    </div>
   )
 }

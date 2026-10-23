@@ -4,6 +4,7 @@ import { managerName, userIsOnClock } from '../../lib/draftState'
 import { categoryLabel, fmtCategoryDelta, fmtCategoryValue, fmtNum, fmtPct, fmtSigned, positionsText, topContributions } from '../../lib/format'
 import { selectRecCurrent, selectRefineCurrent, useDraftStore } from '../../store/draftStore'
 import { PlayerName } from '../common/PlayerName'
+import { Icon } from '../ui/Icon'
 
 export function ShortlistTable() {
   const state = useDraftStore((s) => s.state)
@@ -113,8 +114,8 @@ export function ShortlistTable() {
                 <tr className={tierStart ? 'tier-start' : undefined} data-testid="shortlist-row" data-player-id={c.player_id} data-tier={c.tier}>
                   <td className="num">{i + 1}</td>
                   <td>
-                    <button type="button" className="small" aria-expanded={isOpen} aria-label={`${isOpen ? 'Hide' : 'Show'} full category breakdown for ${c.name}`} data-testid="shortlist-expand" onClick={() => toggleExpanded(c.player_id)}>
-                      {isOpen ? '▾' : '▸'}
+                    <button type="button" className="small ghost icon-btn" aria-expanded={isOpen} aria-label={`${isOpen ? 'Hide' : 'Show'} full category breakdown for ${c.name}`} data-testid="shortlist-expand" onClick={() => toggleExpanded(c.player_id)}>
+                      <Icon name={isOpen ? 'chevron-down' : 'chevron-right'} size={13} />
                     </button>
                   </td>
                   <th scope="row" className="sticky-col">
@@ -170,7 +171,7 @@ export function ShortlistTable() {
                       onClick={() => onClock && void commitPick(c.player_id, onClock)}
                       title={meOnClock ? `Draft ${c.name} to my team` : `Record ${c.name} for ${managerName(state, onClock)} (on the clock)`}
                     >
-                      {meOnClock ? 'Draft' : `→ ${managerName(state, onClock)}`}
+                      {meOnClock ? 'Draft' : `Record for ${managerName(state, onClock)}`}
                     </button>{' '}
                     <button type="button" className="small" aria-pressed={previewPlayerId === c.player_id} onClick={() => setPreview(previewPlayerId === c.player_id ? null : c.player_id, c)}>
                       Preview

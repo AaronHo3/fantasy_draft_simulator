@@ -1,47 +1,28 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import type { CategoryDef, FreeAgentView, PlayerView } from '../../api/types'
+import type { CategoryDef } from '../../api/types'
+import { makeFreeAgent as fa } from '../../test/seasonFixtures'
 import { FreeAgentsTable } from './FreeAgentsTable'
 
 const CATS: CategoryDef[] = [{ key: 'PTS', label: 'Points', higher_is_better: true, kind: 'counting', numerator: null, denominator: null }]
 
-function player(id: string, name: string): PlayerView {
-  return {
-    player_id: id,
-    name,
-    team: 'BOS',
-    primary_position: 'PG',
-    eligible_positions: ['PG', 'G'],
-    eligibility_verified: true,
-    injury_status: null,
-    adp: null,
-    rank: null,
-    projection_source: 'demo',
-    per_game: {},
-    per_game_sd: {},
-    drafted_by: null,
-    drafted_overall: null,
-  } as PlayerView
-}
-
-function fa(id: string, name: string, flags: string[] = []): FreeAgentView {
-  return { player: player(id, name), score: 1.5, z: { PTS: 0.4 }, best_drop: player('d1', 'Bench Guy'), drop_value: 0.2, swap_delta: 1.3, injury_status: flags.includes('out') ? 'OUT' : 'ACTIVE', percent_owned: 12.5, flags }
-}
-
 describe('FreeAgentsTable', () => {
-  it('hides OUT players when the toggle is on', () => {
+  it('marks OUT players and shows each row’s best drop', () => {
     render(<FreeAgentsTable items={[fa('a', 'Healthy Guy'), fa('b', 'Hurt Guy', ['out'])]} categories={CATS} onSelect={() => {}} />)
-    expect(screen.getByText('Hurt Guy')).toBeInTheDocument()
-    fireEvent.click(screen.getByLabelText(/hide out/i))
-    expect(screen.queryByText('Hurt Guy')).toBeNull()
-    expect(screen.getByText('Healthy Guy')).toBeInTheDocument()
-    expect(screen.getByText('Bench Guy')).toBeInTheDocument()
+    expect(screen.getByText('Hurt Guy').closest('tr')).toHaveClass('drafted')
+    expect(screen.getByText('OUT')).toBeInTheDocument()
+    expect(screen.getAllByText('Bench Guy')).toHaveLength(2)
   })
 
-  it('calls onSelect with the player id on row click', () => {
+  it('selects on row or name click, opens details from the details button, and marks the selected row', () => {
     const picked: string[] = []
-    render(<FreeAgentsTable items={[fa('a', 'Healthy Guy')]} categories={CATS} onSelect={(id) => picked.push(id)} />)
+    const opened: string[] = []
+    render(<FreeAgentsTable items={[fa('a', 'Healthy Guy'), fa('b', 'Other Guy')]} categories={CATS} selectedId="b" onSelect={(id) => picked.push(id)} onOpen={(id) => opened.push(id)} />)
+    expect(screen.getByText('Other Guy').closest('tr')).toHaveClass('selected')
+    fireEvent.click(screen.getByText('Other Guy').closest('tr')!.querySelector('td')!)
     fireEvent.click(screen.getByText('Healthy Guy'))
-    expect(picked).toEqual(['a'])
+    fireEvent.click(screen.getByRole('button', { name: 'Details for Healthy Guy' }))
+    expect(picked).toEqual(['b', 'a'])
+    expect(opened).toEqual(['a'])
   })
 })

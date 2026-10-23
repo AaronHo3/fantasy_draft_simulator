@@ -228,3 +228,19 @@ daily lineup decisions. Value is per-game production in category-standard-deviat
 counted. The overperformance baseline is the snapshot's per-game projection x games actually played;
 no other projection is substituted, and prior-only players are flagged "no baseline" and left
 unranked. Season-to-date sums the stored periods.
+
+## DEC-30 — 2026-10-23 — One design system, hand-written SVG charts, no chart framework
+The frontend was redesigned as a single workspace (charcoal sidebar, warm stone canvas, teal for
+actions, amber for draft status and what is the user's, green/red only for favoured/unfavoured and
+over/under expectation; display numerals in Barlow Semi Condensed, body in IBM Plex Sans, tabular
+numerals everywhere). Shared primitives live in `frontend/src/components/ui` (page header, filter
+bar, stat card, chart frame with an explicit unavailable state, tooltip, player identity, states,
+disclosure, "How this works") and charts in `frontend/src/components/charts` (aligned bar list,
+diverging bars, scatter with equality line, heatmap with the value in every cell, two-sided
+probability bars). They are plain React + SVG + CSS: no chart library, the only new dependency is
+`lucide-react` for icons. Charts draw API values only; where a visual needs data the API does not
+return (per-player week-by-week history, uncertainty on matchup odds) the frame shows what is
+missing instead of inventing a series. Page selections (Season tab and week, Performers team /
+scope / week) persist in the URL hash. Every statistical rule stays as before: FG%/FT% are makes ÷
+attempts with attempts shown, turnovers keep "lower is better", missing values render as "—", and
+expected production remains projection per game × games actually played.

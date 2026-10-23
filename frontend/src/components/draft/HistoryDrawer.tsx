@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { lastCommittedPick, managerName } from '../../lib/draftState'
 import { useDraftStore } from '../../store/draftStore'
+import { Icon } from '../ui/Icon'
+import { Segmented } from '../ui/Segmented'
 import { DraftBoard } from './DraftBoard'
 import { LeagueProfiles } from './LeagueProfiles'
 import { RecentPicks } from './RecentPicks'
@@ -18,31 +20,37 @@ export function HistoryDrawer() {
   return (
     <section className="panel history" aria-label="Draft history">
       <div className="history-head">
-        <button type="button" className="small" aria-expanded={open} aria-controls="history-body" onClick={() => setOpen((o) => !o)} data-testid="history-toggle">
-          {open ? '▾' : '▸'} Draft history
+        <button type="button" className="small ghost" aria-expanded={open} aria-controls="history-body" onClick={() => setOpen((o) => !o)} data-testid="history-toggle">
+          <Icon name={open ? 'chevron-down' : 'chevron-right'} size={14} /> Draft history
         </button>
         <span className="last">
           {last ? (
             <>
-              Last pick <b>#{last.overall}</b> {players[last.player_id]?.name ?? last.player_id} → {managerName(state, last.manager_id)}
+              Last pick <b>#{last.overall}</b> {players[last.player_id]?.name ?? last.player_id} to {managerName(state, last.manager_id)}
             </>
           ) : (
             'No picks yet'
           )}
-          <span className="muted"> · {state.picks.length} of {state.schedule.length} recorded</span>
+          <span className="muted">
+            {' '}
+            · {state.picks.length} of {state.schedule.length} recorded
+          </span>
         </span>
         <span className="spacer" />
-        <div className="tabs" role="tablist" style={{ borderBottom: 'none', marginBottom: 0 }}>
-          <button type="button" role="tab" aria-selected={tab === 'recent'} onClick={() => { setTab('recent'); setOpen(true) }}>
-            Recent picks
-          </button>
-          <button type="button" role="tab" aria-selected={tab === 'board'} onClick={() => { setTab('board'); setOpen(true) }} data-testid="tab-board">
-            Draft board
-          </button>
-          <button type="button" role="tab" aria-selected={tab === 'profiles'} onClick={() => { setTab('profiles'); setOpen(true) }} data-testid="tab-profiles">
-            League category profiles
-          </button>
-        </div>
+        <Segmented<HistoryTab>
+          variant="pill"
+          label="History view"
+          value={tab}
+          onChange={(t) => {
+            setTab(t)
+            setOpen(true)
+          }}
+          options={[
+            { id: 'recent', label: 'Recent picks' },
+            { id: 'board', label: 'Draft board', testId: 'tab-board' },
+            { id: 'profiles', label: 'League profiles', testId: 'tab-profiles' },
+          ]}
+        />
       </div>
       {open && (
         <div className="history-body" id="history-body">

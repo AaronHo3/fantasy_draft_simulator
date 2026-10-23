@@ -1,0 +1,395 @@
+/* Hand-written SVG/CSS charts: bar lists, diverging bars, scatter, heatmap, probability pairs. */
+.barlist,
+.diverging-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.bar-row,
+.div-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 160px) 1fr 56px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: none;
+  text-align: left;
+  min-height: 30px;
+  font-weight: 400;
+  color: var(--ink);
+}
+button.bar-row:hover,
+button.div-row:hover {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+.barlist li.selected .bar-row,
+.diverging-rows li.selected .div-row,
+button.bar-row[aria-pressed='true'],
+button.div-row[aria-pressed='true'] {
+  background: var(--teal-soft);
+  border-color: color-mix(in srgb, var(--teal) 40%, white);
+}
+.bar-label,
+.div-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.15;
+}
+.bar-name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bar-sub {
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bar-track {
+  position: relative;
+  height: 14px;
+  background: var(--surface-3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--teal);
+  border-radius: 3px;
+}
+.bar-ref {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 0;
+  border-right: 2px solid var(--ink);
+  background: repeating-linear-gradient(45deg, rgb(26 29 33 / 0.18) 0 2px, transparent 2px 5px);
+  pointer-events: none;
+}
+.bar-value,
+.div-value {
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.tip-anchor:has(> .bar-row),
+.tip-anchor:has(> .div-row) {
+  display: flex;
+  width: 100%;
+}
+
+/* diverging */
+.diverging-axis {
+  display: grid;
+  grid-template-columns: minmax(110px, 160px) 1fr 56px;
+  gap: 10px;
+  padding: 0 6px 4px;
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+.diverging-axis span:nth-child(1) {
+  grid-column: 2;
+  grid-row: 1;
+  text-align: left;
+}
+.diverging-axis span:nth-child(2) {
+  grid-column: 2;
+  grid-row: 1;
+  text-align: center;
+}
+.diverging-axis span:nth-child(3) {
+  grid-column: 2;
+  grid-row: 1;
+  text-align: right;
+}
+.div-track {
+  position: relative;
+  height: 14px;
+  background: var(--surface-3);
+  border-radius: 3px;
+}
+.div-zero {
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  bottom: -3px;
+  width: 1px;
+  background: var(--ink-2);
+}
+.div-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 3px;
+}
+.div-bar.positive {
+  left: 50%;
+  background: var(--good);
+}
+.div-bar.negative {
+  right: 50%;
+  background: var(--bad);
+}
+.div-bar.zero {
+  left: 50%;
+  width: 0;
+}
+.div-value.positive {
+  color: var(--good);
+}
+.div-value.negative {
+  color: var(--bad);
+}
+
+/* scatter */
+.scatter-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.scatter .grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.scatter .tick {
+  font-size: 10px;
+  fill: var(--ink-3);
+}
+.scatter .axis-label {
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--ink-2);
+}
+.scatter .equality {
+  stroke: var(--ink-2);
+  stroke-dasharray: 5 4;
+  stroke-width: 1.2;
+}
+.scatter .pt {
+  fill: var(--teal);
+  stroke: #fff;
+  stroke-width: 1.5;
+  cursor: pointer;
+  opacity: 0.9;
+}
+.scatter .pt.under {
+  opacity: 0.7;
+}
+.scatter .pt.active {
+  stroke: var(--ink);
+  stroke-width: 2;
+  opacity: 1;
+}
+.scatter .pt:focus-visible {
+  outline: none;
+  stroke: var(--focus);
+  stroke-width: 3;
+}
+.scatter .pt-label {
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--ink);
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 3px;
+}
+.scatter-readout {
+  margin-top: 6px;
+  font-size: var(--fs-sm);
+  min-height: 18px;
+}
+
+/* heatmap */
+table.grid.heat .heat-cell {
+  position: relative;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  --heat: 0.2;
+}
+table.grid.heat .heat-cell.good {
+  background: color-mix(in srgb, var(--good) calc(var(--heat) * 55%), var(--surface));
+}
+table.grid.heat .heat-cell.bad {
+  background: color-mix(in srgb, var(--bad) calc(var(--heat) * 55%), var(--surface));
+}
+table.grid.heat .heat-cell.even {
+  background: var(--surface);
+}
+table.grid.heat .heat-cell.missing {
+  color: var(--ink-4);
+}
+.row-select {
+  border: none;
+  background: none;
+  padding: 0;
+  min-height: 0;
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+  text-underline-offset: 2px;
+}
+.row-select:hover {
+  background: none;
+  color: var(--teal);
+}
+.row-select[aria-pressed='true'] {
+  background: none;
+  border: none;
+  color: var(--teal-hover);
+  font-weight: 600;
+}
+table.grid.heat tbody tr:hover > .heat-cell {
+  box-shadow: inset 0 0 0 1px var(--ink-4);
+}
+.heat-scale {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: var(--s-2) 0 0;
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+
+/* probability pair */
+.pair {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.pair-head,
+.pair-row {
+  display: grid;
+  grid-template-columns: 1fr 112px 1fr;
+  align-items: center;
+  gap: 10px;
+}
+.pair-head {
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  padding: 0 2px 2px;
+}
+.pair-side {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pair-side.right {
+  text-align: right;
+}
+.pair-row.missing .pair-num {
+  color: var(--ink-4);
+}
+.pair-row {
+  padding: 2px 2px;
+  border-radius: var(--r-sm);
+}
+.pair-cell {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  align-items: center;
+  gap: 8px;
+}
+.pair-cell.right {
+  grid-template-columns: 1fr 44px;
+}
+.pair-num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--ink-3);
+  font-size: var(--fs-sm);
+}
+.pair-cell.right .pair-num {
+  text-align: left;
+}
+.pair-cell.lead .pair-num {
+  color: var(--good);
+  font-weight: 600;
+}
+.pair-track {
+  height: 10px;
+  background: var(--surface-3);
+  border-radius: 3px;
+  overflow: hidden;
+  display: flex;
+  justify-content: flex-end;
+}
+.pair-cell.right .pair-track {
+  justify-content: flex-start;
+}
+.pair-fill {
+  display: block;
+  height: 100%;
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+.pair-cell.lead .pair-fill {
+  background: var(--good);
+}
+.pair-label {
+  text-align: center;
+  line-height: 1.15;
+  display: flex;
+  flex-direction: column;
+}
+.pair-cat {
+  font-weight: 600;
+  font-size: var(--fs-sm);
+}
+.pair-values {
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.pair.compact .pair-head,
+.pair.compact .pair-row {
+  grid-template-columns: 1fr 82px 1fr;
+  gap: 6px;
+}
+.pair.compact .pair-cell {
+  grid-template-columns: 36px 1fr;
+  gap: 5px;
+}
+.pair.compact .pair-cell.right {
+  grid-template-columns: 1fr 36px;
+}
+.pair.compact .pair-track {
+  height: 7px;
+}
+.pair.compact .pair-cat {
+  font-size: var(--fs-xs);
+  font-weight: 500;
+}
+@media (max-width: 560px) {
+  .bar-row,
+  .div-row,
+  .diverging-axis {
+    grid-template-columns: 90px 1fr 48px;
+    gap: 6px;
+  }
+  .pair-head,
+  .pair-row {
+    grid-template-columns: 1fr 76px 1fr;
+    gap: 6px;
+  }
+  .pair-cell {
+    grid-template-columns: 34px 1fr;
+  }
+  .pair-cell.right {
+    grid-template-columns: 1fr 34px;
+  }
+}

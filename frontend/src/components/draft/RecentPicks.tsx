@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { managerName } from '../../lib/draftState'
+import { teamColor } from '../../lib/teamColors'
 import { useDraftStore } from '../../store/draftStore'
 import { PlayerName } from '../common/PlayerName'
 import { CorrectPickDialog } from './CorrectPickDialog'
@@ -7,6 +8,7 @@ import { CorrectPickDialog } from './CorrectPickDialog'
 /** Most recent picks first; click "fix" to correct a wrongly recorded player. */
 export function RecentPicks({ limit = 24 }: { limit?: number }) {
   const state = useDraftStore((s) => s.state)
+  const players = useDraftStore((s) => s.players)
   const pendingCommit = useDraftStore((s) => s.pendingCommit)
   const [correcting, setCorrecting] = useState<number | null>(null)
   if (!state) return null
@@ -26,7 +28,7 @@ export function RecentPicks({ limit = 24 }: { limit?: number }) {
         {picks.map((p) => {
           const sp = byOverall.get(p.overall)
           return (
-            <li key={p.overall} className={p.manager_id === uid ? 'mine' : undefined} data-testid="recent-pick" data-overall={p.overall}>
+            <li key={p.overall} className={p.manager_id === uid ? 'mine' : undefined} data-testid="recent-pick" data-overall={p.overall} style={{ borderLeftColor: teamColor(players[p.player_id]?.team).primary }}>
               <span className="pick-no">
                 #{p.overall}
                 <br />

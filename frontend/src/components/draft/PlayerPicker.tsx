@@ -5,6 +5,7 @@ import { managerName, pickLookup } from '../../lib/draftState'
 import { fmtNum, PRIMITIVE_POSITIONS, positionsText } from '../../lib/format'
 import { initialPickerState, pickerReducer } from '../../lib/keyboard'
 import { useDraftStore } from '../../store/draftStore'
+import { Icon } from '../ui/Icon'
 
 const SEARCH_LIMIT = 60
 const SEARCH_DEBOUNCE_MS = 150
@@ -145,7 +146,9 @@ export function PlayerPicker() {
           <span className="kbd">/</span> search · <span className="kbd">↑↓</span> · <span className="kbd">Enter</span> select, again to record · <span className="kbd">Esc</span>
         </span>
       </div>
-      <input
+      <div className="search-field">
+        <Icon name="search" size={15} />
+        <input
         ref={inputRef}
         type="search"
         data-testid="picker-search"
@@ -159,8 +162,8 @@ export function PlayerPicker() {
         aria-controls="picker-results"
         aria-activedescendant={picker.cursor >= 0 ? `picker-opt-${picker.cursor}` : undefined}
         autoComplete="off"
-        style={{ width: '100%' }}
       />
+      </div>
       <div className="picker-filters">
         <div className="chips" role="group" aria-label="Position filter">
           {PRIMITIVE_POSITIONS.map((p) => (

@@ -113,7 +113,7 @@ test('link to ESPN (mocked), sync, matchups, power rankings, free agents, result
 
   // --- synced: the real session now carries the league id, the bar shows the mocked sync ---------
   await expect(page.getByTestId('sync-now')).toBeVisible()
-  await expect(page.getByText(/Linked to/)).toContainText('Mock Thieves')
+  await expect(page.getByRole('region', { name: 'ESPN sync' })).toContainText('Mock Thieves')
   const linked = await (await page.request.get(`/api/sessions/${sessionId}/state`)).json()
   expect(linked.league.espn_league_id).toBe(LEAGUE_ID)
   expect(Object.keys(linked.league.espn_team_ids)).toHaveLength(managers.length)
