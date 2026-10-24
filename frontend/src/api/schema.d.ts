@@ -469,6 +469,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sessions/{session_id}/season/moves": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Season Moves */
+        get: operations["season_moves_api_sessions__session_id__season_moves_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sessions/{session_id}/season/performers": {
         parameters: {
             query?: never;
@@ -1607,6 +1624,40 @@ export interface components {
             dropped: string[];
             /** Source Refs */
             source_refs: string[];
+        };
+        /** RosterMoveView */
+        RosterMoveView: {
+            /** Manager Id */
+            manager_id: string;
+            /** Manager Name */
+            manager_name: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "add" | "drop";
+            player: components["schemas"]["PlayerView"];
+            /** Effective At */
+            effective_at: string;
+            /** Period */
+            period: number;
+            /** Source */
+            source: string;
+            /**
+             * Trade
+             * @default false
+             */
+            trade: boolean;
+        };
+        /** RosterMovesResponse */
+        RosterMovesResponse: {
+            ids: components["schemas"]["ResponseIds"];
+            /** Period */
+            period: number | null;
+            /** Periods Available */
+            periods_available: number[];
+            /** Moves */
+            moves: components["schemas"]["RosterMoveView"][];
         };
         /** RosterSlotView */
         RosterSlotView: {
@@ -2914,6 +2965,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PredictionsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    season_moves_api_sessions__session_id__season_moves_get: {
+        parameters: {
+            query?: {
+                period?: number | null;
+            };
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RosterMovesResponse"];
                 };
             };
             /** @description Validation Error */

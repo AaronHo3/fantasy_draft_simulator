@@ -1438,6 +1438,63 @@
     }
    }
   },
+  "/api/sessions/{session_id}/season/moves": {
+   "get": {
+    "summary": "Season Moves",
+    "operationId": "season_moves_api_sessions__session_id__season_moves_get",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     },
+     {
+      "name": "period",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 22,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Period"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RosterMovesResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/sessions/{session_id}/season/performers": {
    "get": {
     "summary": "Season Performers",
@@ -4846,6 +4903,97 @@
      "source_refs"
     ],
     "title": "RosterDiffView"
+   },
+   "RosterMoveView": {
+    "properties": {
+     "manager_id": {
+      "type": "string",
+      "title": "Manager Id"
+     },
+     "manager_name": {
+      "type": "string",
+      "title": "Manager Name"
+     },
+     "kind": {
+      "type": "string",
+      "enum": [
+       "add",
+       "drop"
+      ],
+      "title": "Kind"
+     },
+     "player": {
+      "$ref": "#/components/schemas/PlayerView"
+     },
+     "effective_at": {
+      "type": "string",
+      "title": "Effective At"
+     },
+     "period": {
+      "type": "integer",
+      "title": "Period"
+     },
+     "source": {
+      "type": "string",
+      "title": "Source"
+     },
+     "trade": {
+      "type": "boolean",
+      "title": "Trade",
+      "default": false
+     }
+    },
+    "type": "object",
+    "required": [
+     "manager_id",
+     "manager_name",
+     "kind",
+     "player",
+     "effective_at",
+     "period",
+     "source"
+    ],
+    "title": "RosterMoveView"
+   },
+   "RosterMovesResponse": {
+    "properties": {
+     "ids": {
+      "$ref": "#/components/schemas/ResponseIds"
+     },
+     "period": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Period"
+     },
+     "periods_available": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Periods Available"
+     },
+     "moves": {
+      "items": {
+       "$ref": "#/components/schemas/RosterMoveView"
+      },
+      "type": "array",
+      "title": "Moves"
+     }
+    },
+    "type": "object",
+    "required": [
+     "ids",
+     "period",
+     "periods_available",
+     "moves"
+    ],
+    "title": "RosterMovesResponse"
    },
    "RosterSlotView": {
     "properties": {

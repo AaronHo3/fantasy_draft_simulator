@@ -1,14 +1,17 @@
 import { useState } from 'react'
 import { positionsText } from '../../lib/format'
 import { useDraftStore } from '../../store/draftStore'
+import { useSeasonStore } from '../../store/seasonStore'
 import { PlayerName } from '../common/PlayerName'
 
 /** Inspect any manager's roster without leaving my own context (my roster stays in its own tab). */
 export function TeamsPanel() {
   const state = useDraftStore((s) => s.state)
   const players = useDraftStore((s) => s.players)
+  const moves = useSeasonStore((s) => s.moves)
   const [selected, setSelected] = useState<string | null>(null)
   if (!state) return null
+  const addedThisWeek = new Set((moves?.moves ?? []).filter((m) => m.kind === 'add' && m.period === moves?.period).map((m) => `${m.manager_id}:${m.player.player_id}`))
   const uid = state.league.user_manager_id
   const onClock = state.on_clock_manager_id
   const mid = selected ?? onClock ?? state.league.managers[0]?.id ?? null
@@ -60,7 +63,11 @@ export function TeamsPanel() {
                   <span className="slot">{i + 1}</span>
                   <span className="who">
                     <PlayerName playerId={id} />
-                    {added.has(id) && <span className="badge accent" title="added after the draft (ESPN sync)"> added</span>}
+                    {added.has(id) && (
+                      <span className={addedThisWeek.has(`${mid}:${id}`) ? 'badge ok' : 'badge accent'} title={addedThisWeek.has(`${mid}:${id}`) ? `added in week ${moves?.period} (ESPN sync)` : 'added after the draft (ESPN sync)'}>
+                        {addedThisWeek.has(`${mid}:${id}`) ? `added wk ${moves?.period}` : 'added'}
+                      </span>
+                    )}
                   </span>
                   <span className="side">
                     {players[id]?.team ?? '—'} · {positionsText(players[id]?.eligible_positions)}

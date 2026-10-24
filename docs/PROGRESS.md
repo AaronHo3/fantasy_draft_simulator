@@ -1,5 +1,15 @@
 # Progress
 
+## 2026-10-24 — Scored-category selector and weekly roster moves
+- Setup: category preset (ESPN 9-cat / 8-cat without turnovers) and per-category toggles; the
+  performers explainer, tooltip and drawer read the league's categories (unscored stats are
+  labelled, never summed). The 1000Thieves session was already 8-cat; only the wording was wrong.
+- `GET /season/moves?period=`: every post-draft add/drop from the event log, dated by matchup
+  period, trades marked on both sides. Season → Matchups shows "Roster moves in week N" grouped by
+  team; Teams panel and Recap rosters tag "added wk N".
+- Verified: backend test `test_roster_moves_listed_per_period_with_trades_marked`, frontend 70 unit
+  tests, tsc clean, Playwright 4/4.
+
 ## 2026-10-23 — UI redesign: basketball analytics workspace (DEC-30)
 Spec `docs/superpowers/specs/2026-10-23-ui-redesign-design.md`, plan
 `docs/superpowers/plans/2026-10-23-ui-redesign.md`. Frontend only.

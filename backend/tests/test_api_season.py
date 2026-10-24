@@ -959,3 +959,48 @@ def test_performers_season_scope_accumulates_periods_and_flags_small_samples(cli
     assert client.get(f"/api/sessions/{sid}/season/performers", params={"manager_id": "zz"}).status_code == 422
     empty = client.get(f"/api/sessions/{sid}/season/performers", params={"manager_id": "m01", "period": 5}).json()
     assert empty["contributors"] == [] and any("no ESPN box scores" in n for n in empty["notes"])
+
+
+def test_roster_moves_listed_per_period_with_trades_marked(client, complete_session):
+    sid = complete_session
+    st = client.get(f"/api/sessions/{sid}/state").json()
+    a_drop = st["current_rosters"]["m01"][0]
+    b_drop = st["current_rosters"]["m02"][0]
+    c_drop = st["current_rosters"]["m03"][0]
+    ctx = client.app.state.ctx
+    # week 1 (Oct 20-25): m03 swaps a player with a free agent
+    ctx.store.append(
+        sid,
+        EventType.roster_changed,
+        {
+            "moves": [{"manager_id": "m03", "added": [demo(600)], "dropped": [c_drop], "source_ref": "espn:t1"}],
+            "effective_at": "2026-10-23T05:24:59+00:00",
+        },
+        source="espn",
+    )
+    # week 2 (Oct 26-Nov 1): m01 and m02 trade their first players
+    ctx.store.append(
+        sid,
+        EventType.roster_changed,
+        {
+            "moves": [
+                {"manager_id": "m01", "added": [b_drop], "dropped": [a_drop], "source_ref": "espn:t2"},
+                {"manager_id": "m02", "added": [a_drop], "dropped": [b_drop], "source_ref": "espn:t2"},
+            ],
+            "effective_at": "2026-10-27T03:00:00+00:00",
+        },
+        source="espn",
+    )
+    r = client.get(f"/api/sessions/{sid}/season/moves", params={"period": 1})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["period"] == 1 and body["periods_available"] == [1, 2]
+    kinds = sorted((m["manager_id"], m["kind"], m["player"]["player_id"], m["trade"]) for m in body["moves"])
+    assert kinds == [("m03", "add", demo(600), False), ("m03", "drop", c_drop, False)]
+    assert all(m["period"] == 1 and m["effective_at"].startswith("2026-10-23") for m in body["moves"])
+    r = client.get(f"/api/sessions/{sid}/season/moves", params={"period": 2})
+    body = r.json()
+    assert len(body["moves"]) == 4 and all(m["trade"] for m in body["moves"])
+    # no period: every move, newest first
+    body = client.get(f"/api/sessions/{sid}/season/moves").json()
+    assert body["period"] is None and len(body["moves"]) == 6 and body["moves"][0]["period"] == 2

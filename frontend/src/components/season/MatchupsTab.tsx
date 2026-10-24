@@ -3,7 +3,10 @@ import type { MatchupPairView } from '../../api/types'
 import { useSeasonStore } from '../../store/seasonStore'
 import { Icon } from '../ui/Icon'
 import { EmptyState } from '../ui/States'
+import { useDraftStore } from '../../store/draftStore'
+import { ChartFrame } from '../ui/ChartFrame'
 import { MatchupCard } from './MatchupCard'
+import { RosterMoves } from './RosterMoves'
 
 const key = (m: MatchupPairView) => `${m.period}:${m.home_manager_id}`
 const PERIODS = Array.from({ length: 22 }, (_, i) => i + 1)
@@ -15,6 +18,11 @@ export function MatchupsTab({ sessionId, userId }: { sessionId: string; userId: 
   const setPeriod = useSeasonStore((s) => s.setPeriod)
   const loadOverview = useSeasonStore((s) => s.loadOverview)
   const loadResults = useSeasonStore((s) => s.loadResults)
+  const moves = useSeasonStore((s) => s.moves)
+  const movesStatus = useSeasonStore((s) => s.movesStatus)
+  const movesError = useSeasonStore((s) => s.movesError)
+  const loadMoves = useSeasonStore((s) => s.loadMoves)
+  const openDrawer = useDraftStore((s) => s.openDrawer)
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const period = overview?.current_period ?? null
   const synced = Boolean(overview?.synced_at)
@@ -23,6 +31,9 @@ export function MatchupsTab({ sessionId, userId }: { sessionId: string; userId: 
   useEffect(() => {
     if (synced && period !== null) void loadResults(sessionId, period)
   }, [sessionId, period, synced, loadResults])
+  useEffect(() => {
+    if (synced && period !== null) void loadMoves(sessionId, period)
+  }, [sessionId, period, synced, loadMoves])
 
   if (!overview) return null
   const mine = overview.matchups.find((m) => m.home_manager_id === userId || m.away_manager_id === userId) ?? null
@@ -71,6 +82,21 @@ export function MatchupsTab({ sessionId, userId }: { sessionId: string; userId: 
       ) : (
         <EmptyState title="No ESPN pairings for this week yet">Sync after ESPN publishes the schedule for this matchup period.</EmptyState>
       )}
+      {moves && moves.period === overview.current_period && (
+        <ChartFrame
+          title={`Roster moves in week ${overview.current_period}`}
+          description="Every add, drop and trade ESPN recorded this matchup period, from the synced transaction log. Your team is listed first."
+          legend={[
+            { label: 'added', swatch: 'good' },
+            { label: 'dropped', swatch: 'bad' },
+          ]}
+          testId="roster-moves"
+        >
+          <RosterMoves period={overview.current_period} moves={moves.moves} userId={userId} onOpen={openDrawer} />
+        </ChartFrame>
+      )}
+      {!moves && movesStatus === 'loading' && <p className="muted small-text">Loading roster moves…</p>}
+      {movesStatus === 'error' && <p className="error small-text">Roster moves unavailable: {movesError}</p>}
       {others.length > 0 && (
         <>
           <div className="section-title">

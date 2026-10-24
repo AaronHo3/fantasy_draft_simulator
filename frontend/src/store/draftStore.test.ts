@@ -50,6 +50,9 @@ function fakeApi(state: DraftStateView, overrides: Partial<ApiClient> = {}): Api
     seasonResults: notImpl,
     seasonPredictions: notImpl,
     seasonPerformers: notImpl,
+    seasonMoves: async () => {
+      throw new Error('not in test')
+    },
     ...overrides,
   }
 }

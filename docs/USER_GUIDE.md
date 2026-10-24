@@ -168,6 +168,15 @@ Once the draft is complete a **Season** tab appears.
    session is set to weekly) are shown as warnings and never applied automatically; change the
    session in Setup if you want the simulation to use daily lineups.
 
+### Roster moves
+
+Under the featured matchup, **Roster moves in week N** lists every add, drop and trade ESPN
+recorded during the selected matchup period, grouped by team with your team first (green arrow =
+added, red arrow = dropped, a "trade" badge on both sides of a swap between managers). The same
+information marks players elsewhere: the Teams panel and the Recap rosters tag players picked up
+this week as "added wk N" and earlier pickups as "added". Moves come from the synced transaction
+log (`GET /season/moves?period=`), dated by the matchup period they landed in.
+
 ## Team performers
 
 The page opens with a stat row (team contribution, expected, vs expected, games counted), the two

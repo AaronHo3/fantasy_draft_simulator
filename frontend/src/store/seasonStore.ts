@@ -2,7 +2,7 @@
 // Sync is the only action that reaches ESPN; everything else reads the backend's stored state.
 import { create } from 'zustand'
 import { ApiError, api as defaultApi, type ApiClient } from '../api/client'
-import type { FreeAgentsResponse, PredictionsResponse, SeasonOverview, SyncResult, WeekResultsResponse } from '../api/types'
+import type { FreeAgentsResponse, PredictionsResponse, RosterMovesResponse, SeasonOverview, SyncResult, WeekResultsResponse } from '../api/types'
 import { browserStorage, type KeyValueStorage } from '../lib/storage'
 import { useDraftStore } from './draftStore'
 
@@ -38,6 +38,9 @@ export interface SeasonStore {
   predictions: PredictionsResponse | null
   predictionsStatus: LoadStatus
   predictionsError: string | null
+  moves: RosterMovesResponse | null
+  movesStatus: LoadStatus
+  movesError: string | null
   syncStatus: 'idle' | 'syncing' | 'error'
   syncError: string | null
   lastSync: SyncResult | null
@@ -48,6 +51,7 @@ export interface SeasonStore {
   loadFreeAgents(sessionId: string, query?: FreeAgentQuery): Promise<void>
   loadResults(sessionId: string, period: number): Promise<void>
   loadPredictions(sessionId: string): Promise<void>
+  loadMoves(sessionId: string, period?: number | null): Promise<void>
   setPeriod(period: number | null): void
   setAutoRefresh(minutes: AutoRefreshMinutes): void
   start(): void
@@ -104,6 +108,9 @@ export function createSeasonStore(overrides: Partial<SeasonDeps> = {}) {
       predictions: null,
       predictionsStatus: 'idle',
       predictionsError: null,
+      moves: null,
+      movesStatus: 'idle',
+      movesError: null,
       syncStatus: 'idle',
       syncError: null,
       lastSync: null,
@@ -171,6 +178,16 @@ export function createSeasonStore(overrides: Partial<SeasonDeps> = {}) {
           set({ predictions, predictionsStatus: 'ready' })
         } catch (e) {
           set({ predictionsStatus: 'error', predictionsError: errorText(e) })
+        }
+      },
+
+      async loadMoves(sessionId, period = null) {
+        set({ movesStatus: 'loading', movesError: null })
+        try {
+          const moves = await api.seasonMoves(sessionId, period)
+          set({ moves, movesStatus: 'ready' })
+        } catch (e) {
+          set({ movesStatus: 'error', movesError: errorText(e) })
         }
       },
 

@@ -277,3 +277,62 @@ table.grid.results tr.projected-row .swatch {
     grid-template-columns: 1fr;
   }
 }
+
+/* roster moves */
+.moves-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--s-3);
+}
+.moves-team {
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: var(--s-2) var(--s-3);
+  min-width: 0;
+}
+.moves-team.mine {
+  background: var(--mine);
+  border-color: var(--mine-border);
+}
+.moves-team h3 {
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.moves-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.move {
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 4px;
+  border-radius: var(--r-sm);
+}
+.move.add {
+  background: var(--good-soft);
+}
+.move.drop {
+  background: var(--bad-soft);
+}
+.move-sign {
+  display: inline-flex;
+  color: var(--good);
+}
+.move-sign.drop {
+  color: var(--bad);
+}
+.move .player-link {
+  text-decoration: none;
+}
+.move-meta {
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}

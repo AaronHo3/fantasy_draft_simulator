@@ -5,6 +5,7 @@ import type {
   EventRequest,
   EventResponse,
   FastRecommendRequest,
+  FreeAgentsResponse,
   HealthView,
   ImportApplyResponse,
   ImportKind,
@@ -12,24 +13,24 @@ import type {
   JobAccepted,
   JobView,
   LeagueProfilesResponse,
-  PuntAdvisorResponse,
+  LinkApplyRequest,
+  LinkPreview,
+  LinkRequest,
+  MatchupResponse,
+  PerformersResponse,
   PlayerView,
+  PredictionsResponse,
+  PuntAdvisorResponse,
   RecommendationResponse,
   RefineRequest,
+  RosterMovesResponse,
+  SeasonOverview,
   SessionCreate,
   SessionDetail,
   SessionSummary,
   SnapshotMeta,
-  LinkRequest,
-  LinkPreview,
-  LinkApplyRequest,
   SyncResult,
-  SeasonOverview,
-  MatchupResponse,
-  FreeAgentsResponse,
   WeekResultsResponse,
-  PredictionsResponse,
-  PerformersResponse,
 } from './types'
 
 export class ApiError extends Error {
@@ -118,6 +119,7 @@ export interface ApiClient {
   seasonResults(id: string, period: number): Promise<WeekResultsResponse>
   seasonPredictions(id: string): Promise<PredictionsResponse>
   seasonPerformers(id: string, managerId: string, period?: number | null): Promise<PerformersResponse>
+  seasonMoves(id: string, period?: number | null): Promise<RosterMovesResponse>
 }
 
 export function createApiClient(fetchImpl: FetchLike = (i, o) => fetch(i, o), base = '/api'): ApiClient {
@@ -190,6 +192,7 @@ export function createApiClient(fetchImpl: FetchLike = (i, o) => fetch(i, o), ba
     seasonPredictions: (id) => request('GET', `/sessions/${encodeURIComponent(id)}/season/predictions`),
     seasonPerformers: (id, managerId, period = null) =>
       request('GET', `/sessions/${encodeURIComponent(id)}/season/performers${qs({ manager_id: managerId, period })}`),
+    seasonMoves: (id, period = null) => request('GET', `/sessions/${encodeURIComponent(id)}/season/moves${qs({ period })}`),
   }
 }
 

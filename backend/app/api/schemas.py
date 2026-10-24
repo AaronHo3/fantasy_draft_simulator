@@ -619,6 +619,24 @@ class PredictionsResponse(BaseModel):
     summary: PredictionSummary
 
 
+class RosterMoveView(BaseModel):
+    manager_id: str
+    manager_name: str
+    kind: Literal["add", "drop"]
+    player: PlayerView
+    effective_at: str
+    period: int
+    source: str
+    trade: bool = False
+
+
+class RosterMovesResponse(BaseModel):
+    ids: ResponseIds
+    period: int | None
+    periods_available: list[int]
+    moves: list[RosterMoveView]
+
+
 class PerformerRow(BaseModel):
     rank: int
     player: PlayerView

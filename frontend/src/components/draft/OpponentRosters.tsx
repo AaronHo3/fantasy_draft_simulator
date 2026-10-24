@@ -1,12 +1,15 @@
 import { positionsText } from '../../lib/format'
 import { useDraftStore } from '../../store/draftStore'
+import { useSeasonStore } from '../../store/seasonStore'
 import { PlayerName } from '../common/PlayerName'
 
 export function OpponentRosters() {
   const state = useDraftStore((s) => s.state)
   const players = useDraftStore((s) => s.players)
+  const moves = useSeasonStore((s) => s.moves)
   if (!state) return null
   const uid = state.league.user_manager_id
+  const addedThisWeek = new Set((moves?.moves ?? []).filter((m) => m.kind === 'add' && m.period === moves?.period).map((m) => `${m.manager_id}:${m.player.player_id}`))
   return (
     <div className="table-wrap">
       <table className="grid" aria-label="Rosters by manager">
@@ -32,7 +35,11 @@ export function OpponentRosters() {
                   {ids.map((id, i) => (
                     <span key={id}>
                       {i > 0 ? ', ' : ''}
-                      <PlayerName playerId={id} /> <span className="muted">({positionsText(players[id]?.eligible_positions)}{!drafted.includes(id) ? ', added' : ''})</span>
+                      <PlayerName playerId={id} />{' '}
+                      <span className="muted">
+                        ({positionsText(players[id]?.eligible_positions)}
+                        {!drafted.includes(id) ? (addedThisWeek.has(`${m.id}:${id}`) ? `, added wk ${moves?.period}` : ', added') : ''})
+                      </span>
                     </span>
                   ))}
                   {ids.length === 0 && <span className="muted">—</span>}

@@ -80,6 +80,11 @@ def season_predictions(session_id: str, ctx: AppContext = Depends(get_context)):
     return _run(season.predictions, ctx, session_id)
 
 
+@router.get("/sessions/{session_id}/season/moves", response_model=S.RosterMovesResponse)
+def season_moves(session_id: str, period: int | None = Query(default=None, ge=1, le=22), ctx: AppContext = Depends(get_context)):
+    return _run(season.roster_moves, ctx, session_id, period)
+
+
 @router.get("/sessions/{session_id}/season/performers", response_model=S.PerformersResponse)
 def season_performers(
     session_id: str,

@@ -488,6 +488,59 @@ def _actual_winner(
     return None, None
 
 
+def roster_moves(ctx: AppContext, session_id: str, period: int | None) -> S.RosterMovesResponse:
+    """Every post-draft add and drop from the event log, dated by the matchup period it landed in.
+
+    A player dropped by one manager and added by another in the same event is a trade."""
+    from app.draft.events import EventType
+    from app.season.weeks import _us_date, current_period
+
+    meta, state = _session(ctx, session_id)
+    snap = _snapshot(ctx, meta)
+    names = {m.id: m.name for m in state.league.managers}
+    rows: list[S.RosterMoveView] = []
+    for ev in ctx.store.events(session_id):
+        if ev.type != EventType.roster_changed:
+            continue
+        stamp = str(ev.payload.get("effective_at") or ev.created_at)
+        try:
+            when = _us_date(stamp)
+        except ValueError:
+            when = _us_date(ev.created_at)
+        per = current_period(state.league.season, when)
+        moves = ev.payload.get("moves", [])
+        dropped_by = {pid: str(m["manager_id"]) for m in moves for pid in m.get("dropped", [])}
+        added_by = {pid: str(m["manager_id"]) for m in moves for pid in m.get("added", [])}
+        for m in moves:
+            mid = str(m["manager_id"])
+            src = str(m.get("source_ref") or ev.source)
+            for kind, ids, other in (("add", m.get("added", []), dropped_by), ("drop", m.get("dropped", []), added_by)):
+                for pid in ids:
+                    i = snap.index.get(pid)
+                    if i is None:
+                        continue
+                    trade = other.get(pid) not in (None, mid)
+                    rows.append(
+                        S.RosterMoveView(
+                            manager_id=mid,
+                            manager_name=names.get(mid, mid),
+                            kind=kind,
+                            player=svc.player_view(snap, i, state),
+                            effective_at=stamp,
+                            period=per,
+                            source=src,
+                            trade=trade,
+                        )
+                    )
+    periods = sorted({r.period for r in rows})
+    if period is not None:
+        rows = [r for r in rows if r.period == period]
+    rows.sort(key=lambda r: (r.effective_at, r.manager_name, r.kind == "add", r.player.name), reverse=True)
+    return S.RosterMovesResponse(
+        ids=svc.response_ids(state, snap, ctx.settings.default_seed), period=period, periods_available=periods, moves=rows
+    )
+
+
 def predictions(ctx: AppContext, session_id: str) -> S.PredictionsResponse:
     meta, state = _session(ctx, session_id)
     snap = _snapshot(ctx, meta)
