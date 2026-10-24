@@ -14,6 +14,9 @@ Open the frontend URL. The **Setup** screen lets you:
 
 - pick a **data snapshot**: the real `NBA 2026-27` snapshot (if `make refresh` + `make build-snapshot`
   have been run) or the synthetic demo (always available, loudly labeled);
+- choose which categories are scored (ESPN 9-cat, 8-cat without turnovers, or any subset by
+  toggling chips); only scored categories enter rankings, simulations, the category profile and
+  the performers' contribution, and unscored stats are labelled as such wherever they still appear;
 - set the scoring format (H2H each category, H2H most categories, rotisserie), lineup mode
   (weekly / daily), strict eligibility, managers and draft order (snake, linear, third-round
   reversal), your team, starting slots, bench / IR counts, primary-position caps, keepers and

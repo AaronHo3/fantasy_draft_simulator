@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import type { PerformerRow } from '../../api/types'
+import type { CategoryDef, PerformerRow } from '../../api/types'
 import { PerformerTable } from './PerformerTable'
 
 function row(rank: number, id: string, name: string, contribution: number, over: number | null, games = 3, flags: string[] = []): PerformerRow {
@@ -48,7 +48,7 @@ describe('PerformerTable', () => {
     const detail = screen.getByTestId('performer-detail')
     expect(detail).toHaveTextContent('21/45')
     expect(detail).toHaveTextContent('46.7%')
-    expect(detail).toHaveTextContent(/TOV/)
+    expect(detail).toHaveTextContent(/Turnovers/)
     // the per-category breakdown that explains the headline number
     const breakdown = within(detail).getByRole('table', { name: /contribution by category/i })
     expect(breakdown).toHaveTextContent('7.0')
@@ -60,5 +60,14 @@ describe('PerformerTable', () => {
     render(<PerformerTable rows={rows} metric="over_expected" />)
     const prior = screen.getAllByTestId('performer-row')[2]
     expect(within(prior).getByTestId('over-expected')).toHaveTextContent('—')
+  })
+})
+
+describe('PerformerTable drawer and league categories', () => {
+  it('marks turnovers as not scored when the league has no TOV category', () => {
+    const cats = [{ key: 'PTS', label: 'Points', higher_is_better: true, kind: 'counting' }] as unknown as CategoryDef[]
+    render(<PerformerTable rows={rows} metric="contribution" categories={cats} />)
+    fireEvent.click(screen.getByRole('button', { name: /details for Star Player/i }))
+    expect(screen.getByTestId('performer-detail')).toHaveTextContent(/not scored in this league/i)
   })
 })

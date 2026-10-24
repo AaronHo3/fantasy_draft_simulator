@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import type { PerformerRow } from '../../api/types'
+import type { CategoryDef, PerformerRow } from '../../api/types'
 import { fmtNum, fmtSigned } from '../../lib/format'
 import { Badge } from '../common/Badge'
 import { Icon } from '../ui/Icon'
@@ -12,7 +12,7 @@ const DETAIL_KEYS: { key: string; label: string }[] = [
   { key: 'AST', label: 'Assists' },
   { key: 'STL', label: 'Steals' },
   { key: 'BLK', label: 'Blocks' },
-  { key: 'TOV', label: 'Turnovers (TOV, lower is better)' },
+  { key: 'TOV', label: 'Turnovers' },
   { key: 'FG3M', label: 'Threes made' },
 ]
 
@@ -26,10 +26,15 @@ function cell(v: number | null | undefined, key: string): string {
 interface PerformerDrawerProps {
   row: PerformerRow
   onClose: () => void
+  /** The league's scored categories; stats outside them are shown but labelled as not scored. */
+  categories?: CategoryDef[]
 }
 
 /** Slide-in detail: actual vs expected production, games counted, makes/attempts, and the per-category units. */
-export function PerformerDrawer({ row: r, onClose }: PerformerDrawerProps) {
+export function PerformerDrawer({ row: r, onClose, categories }: PerformerDrawerProps) {
+  const scored = categories ? new Set(categories.map((c) => c.key)) : null
+  const isScored = (key: string) => scored === null || scored.has(key)
+  const scoresTov = isScored('TOV')
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
@@ -82,12 +87,17 @@ export function PerformerDrawer({ row: r, onClose }: PerformerDrawerProps) {
               const a = r.actual[key] ?? null
               const e = r.expected?.[key] ?? null
               const sign = key === 'TOV' ? -1 : 1
+              const unscored = !isScored(key)
               return (
-                <tr key={key}>
-                  <th scope="row">{label}</th>
+                <tr key={key} className={unscored ? 'unscored' : undefined}>
+                  <th scope="row">
+                    {label}
+                    {key === 'TOV' && scoresTov && <span className="muted"> (lower is better)</span>}
+                    {unscored && <span className="muted"> · not scored in this league</span>}
+                  </th>
                   <td className="num">{cell(a, key)}</td>
                   <td className="num">{cell(e, key)}</td>
-                  <td className={`num ${a !== null && e !== null ? ((a - e) * sign > 0 ? 'pos' : (a - e) * sign < 0 ? 'neg' : '') : 'muted'}`}>{a !== null && e !== null ? fmtSigned(a - e, 1) : '—'}</td>
+                  <td className={`num ${unscored ? 'muted' : a !== null && e !== null ? ((a - e) * sign > 0 ? 'pos' : (a - e) * sign < 0 ? 'neg' : '') : 'muted'}`}>{a !== null && e !== null ? fmtSigned(a - e, 1) : '—'}</td>
                   <td className="num">{cell(r.actual_per_game[key], key)}</td>
                   <td className="num">{cell(r.expected_per_game?.[key], key)}</td>
                 </tr>
@@ -154,7 +164,8 @@ export function PerformerDrawer({ row: r, onClose }: PerformerDrawerProps) {
         </table>
       </div>
       <p className="table-note">
-        One unit is one standard deviation of per-game production across the league pool. FG% and FT% are shooting impact on the player's own attempts against the pool rate; turnovers count against.
+        One unit is one standard deviation of per-game production across the league pool. FG% and FT% are shooting impact on the player's own attempts against the pool rate.{' '}
+        {scoresTov ? 'Turnovers count against.' : 'Turnovers are not scored in this league and are not part of contribution.'}
       </p>
     </aside>
   )

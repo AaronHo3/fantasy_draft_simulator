@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { PerformerRow } from '../../api/types'
+import type { CategoryDef, PerformerRow } from '../../api/types'
 import { fmtNum, fmtSigned, positionsText } from '../../lib/format'
 import { Badge } from '../common/Badge'
 import { Icon } from '../ui/Icon'
@@ -53,10 +53,12 @@ interface PerformerTableProps {
   /** Controlled drawer: which row's details are open. Uncontrolled when omitted. */
   openId?: string | null
   onOpenChange?: (id: string | null) => void
+  /** League's scored categories, forwarded to the drawer. */
+  categories?: CategoryDef[]
 }
 
 /** Sortable table of every rostered player; the name opens a detail drawer with actual vs expected. */
-export function PerformerTable({ rows, metric, selectedId = null, onSelect, openId, onOpenChange }: PerformerTableProps) {
+export function PerformerTable({ rows, metric, selectedId = null, onSelect, openId, onOpenChange, categories }: PerformerTableProps) {
   const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({ key: 'rank', desc: false })
   const [localOpen, setLocalOpen] = useState<string | null>(null)
   const open = openId === undefined ? localOpen : openId
@@ -156,7 +158,7 @@ export function PerformerTable({ rows, metric, selectedId = null, onSelect, open
           </tbody>
         </table>
       </div>
-      {openRow && <PerformerDrawer row={openRow} onClose={() => setOpen(null)} />}
+      {openRow && <PerformerDrawer row={openRow} onClose={() => setOpen(null)} categories={categories} />}
     </>
   )
 }

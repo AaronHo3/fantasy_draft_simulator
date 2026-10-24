@@ -77,6 +77,7 @@ export function validateLeague(l: LeagueConfig): string[] {
   if (l.managers.some((m) => !m.name.trim())) errs.push('Every manager needs a name.')
   if (!l.managers.some((m) => m.id === l.user_manager_id)) errs.push('Pick which team is yours.')
   if (!l.starting_slots || l.starting_slots.length === 0) errs.push('Add at least one starting slot.')
+  if (!l.categories || l.categories.length === 0) errs.push('Score at least one category.')
   for (const k of l.keepers ?? []) {
     if (!k.player_id.trim()) errs.push('Keeper rows need a player id.')
     if (k.round < 1 || k.round > (l.starting_slots?.length ?? 0) + l.bench_slots) errs.push(`Keeper round ${k.round} is outside the draft.`)

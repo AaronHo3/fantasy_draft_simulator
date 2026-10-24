@@ -20,7 +20,8 @@ import { useDraftStore } from '../store/draftStore'
 
 type Scope = 'week' | 'season'
 
-const CONTRIB_TIP = 'Top contributors: Σ over categories of (per-game stat ÷ unit size) × games ESPN counted for this team. One unit = one standard deviation of per-game production across the league pool; FG%/FT% as shooting impact; turnovers count against.'
+const contribTip = (scoresTov: boolean) =>
+  `Top contributors: Σ over the league's scored categories of (per-game stat ÷ unit size) × games ESPN counted for this team. One unit = one standard deviation of per-game production across the league pool; FG%/FT% as shooting impact${scoresTov ? '; turnovers count against' : '; turnovers are not scored in this league'}.`
 const OVER_TIP = 'Biggest overperformers: contribution minus expected, where expected = the same formula on the projected per-game line × the games actually played. No projection or no games = not ranked.'
 
 /** Team performers: who produced the most for a fantasy team, and who beat their projection by the most. */
@@ -93,6 +94,7 @@ export function PerformersScreen() {
   }
   const chips: ContextChip[] = [{ label: 'Team', value: teamName, tone: managerId === state.league.user_manager_id ? 'amber' : 'neutral' }]
   if (data) chips.push({ label: scope === 'week' ? 'Week' : 'Scope', value: scope === 'week' ? data.period ?? '—' : `season · ${periods.length} wk` })
+  if (data) chips.push({ label: 'Scoring', value: `${data.categories.length}-cat${data.categories.some((c) => c.key === 'TOV') ? '' : ', no TOV'}`, title: data.categories.map((c) => c.label).join(', ') })
   if (isDemo) chips.push({ label: 'Data', value: 'demo', tone: 'demo' })
 
   return (
@@ -186,7 +188,7 @@ export function PerformersScreen() {
             <StatCard label="Games counted" value={totalGames} detail={scope === 'week' ? 'this week' : `across ${periods.length} week${periods.length === 1 ? '' : 's'}`} />
           </StatRow>
           <div className="leaderboards">
-            <LeaderboardCard title="Top contributors" tooltip={CONTRIB_TIP} rows={data.contributors} metric="contribution" testId="top-contributors" selectedId={selectedId} onSelect={select} />
+            <LeaderboardCard title="Top contributors" tooltip={contribTip(data.categories.some((c) => c.key === 'TOV'))} rows={data.contributors} metric="contribution" testId="top-contributors" selectedId={selectedId} onSelect={select} />
             <LeaderboardCard title="Biggest overperformers" tooltip={OVER_TIP} rows={data.overperformers} metric="over_expected" testId="top-overperformers" selectedId={selectedId} onSelect={select} />
           </div>
           <div className="perf-charts">
@@ -249,7 +251,7 @@ export function PerformersScreen() {
                 ]}
               />
             </div>
-            <PerformerTable rows={rows} metric={metric} selectedId={selectedId} onSelect={setSelectedId} openId={openId} onOpenChange={setOpenId} />
+            <PerformerTable rows={rows} metric={metric} selectedId={selectedId} onSelect={setSelectedId} openId={openId} onOpenChange={setOpenId} categories={data.categories} />
             {data.notes.length > 0 && (
               <ul className="table-note" style={{ paddingLeft: 18 }}>
                 {data.notes.map((n) => (

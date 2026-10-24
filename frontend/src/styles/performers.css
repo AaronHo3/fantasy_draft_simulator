@@ -180,3 +180,9 @@ table.grid.performers .row-player {
     grid-template-columns: 1fr;
   }
 }
+
+table.grid tr.unscored > th,
+table.grid tr.unscored > td {
+  color: var(--ink-3);
+  background: repeating-linear-gradient(135deg, transparent 0 6px, rgb(26 29 33 / 0.03) 6px 12px);
+}
