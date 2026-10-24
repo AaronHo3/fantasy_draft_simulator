@@ -174,7 +174,9 @@ Under the featured matchup, **Roster moves in week N** lists every add, drop and
 recorded during the selected matchup period, grouped by team with your team first (green arrow =
 added, red arrow = dropped, a "trade" badge on both sides of a swap between managers). The same
 information marks players elsewhere: the Teams panel and the Recap rosters tag players picked up
-this week as "added wk N" and earlier pickups as "added". Moves come from the synced transaction
+this week as "added wk N" and earlier pickups as "added", and the Performers table badges the
+selected team's adds and drops ("added wk N" / "dropped wk N") next to each player's contribution,
+so a player dropped mid-week still shows the games he played while rostered. Moves come from the synced transaction
 log (`GET /season/moves?period=`), dated by the matchup period they landed in.
 
 ## Team performers

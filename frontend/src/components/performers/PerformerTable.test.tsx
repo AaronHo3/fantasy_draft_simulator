@@ -71,3 +71,19 @@ describe('PerformerTable drawer and league categories', () => {
     expect(screen.getByTestId('performer-detail')).toHaveTextContent(/not scored in this league/i)
   })
 })
+
+describe('PerformerTable roster moves', () => {
+  it('badges players added or dropped in the shown week next to their contribution', () => {
+    render(
+      <PerformerTable
+        rows={rows}
+        metric="contribution"
+        moves={{ a: [{ kind: 'add', period: 1 }], b: [{ kind: 'drop', period: 1 }] }}
+      />,
+    )
+    const body = screen.getAllByTestId('performer-row')
+    expect(within(body[0]).getByText('added wk 1')).toBeInTheDocument()
+    expect(within(body[1]).getByText('dropped wk 1')).toBeInTheDocument()
+    expect(within(body[2]).queryByText(/wk 1/)).toBeNull()
+  })
+})

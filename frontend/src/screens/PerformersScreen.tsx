@@ -5,7 +5,7 @@ import { Diverging } from '../components/charts/Diverging'
 import { Scatter } from '../components/charts/Scatter'
 import { Explainer } from '../components/performers/Explainer'
 import { LeaderboardCard } from '../components/performers/LeaderboardCard'
-import { PerformerTable, type Metric } from '../components/performers/PerformerTable'
+import { PerformerTable, type Metric, type MoveTags } from '../components/performers/PerformerTable'
 import { ChartFrame } from '../components/ui/ChartFrame'
 import { Icon } from '../components/ui/Icon'
 import { PageHeader, type ContextChip } from '../components/ui/PageHeader'
@@ -17,6 +17,7 @@ import { readHashQuery, replaceHashQuery } from '../lib/hashQuery'
 import { buildUrl } from '../lib/router'
 import { teamColor } from '../lib/teamColors'
 import { useDraftStore } from '../store/draftStore'
+import { useSeasonStore } from '../store/seasonStore'
 
 type Scope = 'week' | 'season'
 
@@ -41,6 +42,8 @@ export function PerformersScreen() {
   const [error, setError] = useState<string | null>(null)
 
   const managerId = manager ?? state?.league.user_manager_id ?? null
+  const movesBody = useSeasonStore((s) => s.moves)
+  const loadMoves = useSeasonStore((s) => s.loadMoves)
 
   useEffect(() => {
     if (!sessionId || !managerId) return
@@ -65,6 +68,11 @@ export function PerformersScreen() {
       cancelled = true
     }
   }, [sessionId, managerId, scope, period])
+
+  useEffect(() => {
+    if (!sessionId || !state?.is_complete) return
+    void loadMoves(sessionId, scope === 'week' ? period : null)
+  }, [sessionId, scope, period, loadMoves, state?.is_complete])
 
   useEffect(() => {
     replaceHashQuery({ team: manager, scope: scope === 'season' ? 'season' : null, week: scope === 'week' && period !== null ? String(period) : null })
@@ -92,6 +100,15 @@ export function PerformersScreen() {
     setSelectedId(id)
     setOpenId(id)
   }
+  const moveTags: MoveTags = {}
+  const wantPeriod = scope === 'week' ? period : null
+  if (movesBody && movesBody.period === wantPeriod) {
+    for (const m of movesBody.moves) {
+      if (m.manager_id !== managerId) continue
+      ;(moveTags[m.player.player_id] ??= []).push({ kind: m.kind, period: m.period })
+    }
+  }
+  const nMoves = Object.values(moveTags).reduce((a, t) => a + t.length, 0)
   const chips: ContextChip[] = [{ label: 'Team', value: teamName, tone: managerId === state.league.user_manager_id ? 'amber' : 'neutral' }]
   if (data) chips.push({ label: scope === 'week' ? 'Week' : 'Scope', value: scope === 'week' ? data.period ?? '—' : `season · ${periods.length} wk` })
   if (data) chips.push({ label: 'Scoring', value: `${data.categories.length}-cat${data.categories.some((c) => c.key === 'TOV') ? '' : ', no TOV'}`, title: data.categories.map((c) => c.label).join(', ') })
@@ -251,7 +268,12 @@ export function PerformersScreen() {
                 ]}
               />
             </div>
-            <PerformerTable rows={rows} metric={metric} selectedId={selectedId} onSelect={setSelectedId} openId={openId} onOpenChange={setOpenId} categories={data.categories} />
+            <PerformerTable rows={rows} metric={metric} selectedId={selectedId} onSelect={setSelectedId} openId={openId} onOpenChange={setOpenId} categories={data.categories} moves={moveTags} />
+            {nMoves > 0 && (
+              <p className="table-note">
+                <span className="badge ok">added wk N</span> and <span className="badge error">dropped wk N</span> mark this team's roster moves {scope === 'week' ? 'this week' : 'this season'}; a dropped player keeps the games he played while rostered.
+              </p>
+            )}
             {data.notes.length > 0 && (
               <ul className="table-note" style={{ paddingLeft: 18 }}>
                 {data.notes.map((n) => (

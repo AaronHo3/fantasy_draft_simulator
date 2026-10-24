@@ -8,6 +8,13 @@ import { PerformerDrawer } from './PerformerDrawer'
 import { Portrait } from './Portrait'
 
 export type Metric = 'contribution' | 'over_expected'
+
+export interface MoveTag {
+  kind: 'add' | 'drop'
+  period: number
+}
+/** Player id -> that team's adds/drops of him, for the shown scope. */
+export type MoveTags = Record<string, MoveTag[]>
 type SortKey = 'rank' | 'player' | 'games' | 'minutes' | 'contribution' | 'over_expected' | 'PTS' | 'REB' | 'AST' | 'STL' | 'BLK' | 'FG3M' | 'FG_PCT' | 'FT_PCT'
 
 const STAT_COLS: { key: 'PTS' | 'REB' | 'AST' | 'STL' | 'BLK' | 'FG3M' | 'FG_PCT' | 'FT_PCT'; label: string }[] = [
@@ -55,10 +62,12 @@ interface PerformerTableProps {
   onOpenChange?: (id: string | null) => void
   /** League's scored categories, forwarded to the drawer. */
   categories?: CategoryDef[]
+  /** Roster moves to badge next to the player (added wk N / dropped wk N). */
+  moves?: MoveTags
 }
 
 /** Sortable table of every rostered player; the name opens a detail drawer with actual vs expected. */
-export function PerformerTable({ rows, metric, selectedId = null, onSelect, openId, onOpenChange, categories }: PerformerTableProps) {
+export function PerformerTable({ rows, metric, selectedId = null, onSelect, openId, onOpenChange, categories, moves }: PerformerTableProps) {
   const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({ key: 'rank', desc: false })
   const [localOpen, setLocalOpen] = useState<string | null>(null)
   const open = openId === undefined ? localOpen : openId
@@ -122,6 +131,11 @@ export function PerformerTable({ rows, metric, selectedId = null, onSelect, open
                       >
                         {r.player.name}
                       </button>
+                      {(moves?.[r.player.player_id] ?? []).map((t) => (
+                        <Badge key={`${t.kind}-${t.period}`} tone={t.kind === 'add' ? 'ok' : 'error'} title={t.kind === 'add' ? `picked up in week ${t.period}; only games while rostered count` : `dropped in week ${t.period}; games before the drop still count for this team`}>
+                          {t.kind === 'add' ? 'added' : 'dropped'} wk {t.period}
+                        </Badge>
+                      ))}
                       {r.flags.map((f) => (
                         <Badge key={f} tone={f === 'no games' ? 'neutral' : 'warn'}>
                           {f}
